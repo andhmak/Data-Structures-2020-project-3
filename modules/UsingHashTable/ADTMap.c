@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "ADTMap.h"
+#include "ADTList.h"
 
 
 // Οι κόμβοι του map στην υλοποίηση με hash table, μπορούν να είναι σε 3 διαφορετικές καταστάσεις,
@@ -24,18 +25,18 @@ int prime_sizes[] = {53, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 4915
 
 // Χρησιμοποιούμε open addressing, οπότε σύμφωνα με την θεωρία, πρέπει πάντα να διατηρούμε
 // τον load factor του  hash table μικρότερο ή ίσο του 0.5, για να έχουμε αποδoτικές πράξεις
-#define MAX_LOAD_FACTOR 0.5
+#define MAX_LOAD_FACTOR 0.9
 
 // Δομή του κάθε κόμβου που έχει το hash table (με το οποίο υλοιποιούμε το map)
-struct map_node{
+struct map_node {
 	Pointer key;		// Το κλειδί που χρησιμοποιείται για να hash-αρουμε
 	Pointer value;  	// Η τιμή που αντισοιχίζεται στο παραπάνω κλειδί
-	State state;		// Μεταβλητή για να μαρκάρουμε την κατάσταση των κόμβων (βλέπε διαγραφή)
+	uint pos;
 };
 
 // Δομή του Map (περιέχει όλες τις πληροφορίες που χρεαζόμαστε για το HashTable)
 struct map {
-	MapNode array;				// Ο πίνακας που θα χρησιμοποιήσουμε για το map (remember, φτιάχνουμε ένα hash table)
+	List *list_array;			// Ο πίνακας δεικτών σε λίστες που θα χρησιμοποιήσουμε για το map (remember, φτιάχνουμε ένα hash table με separate chaining)
 	int capacity;				// Πόσο χώρο έχουμε δεσμεύσει.
 	int size;					// Πόσα στοιχεία έχουμε προσθέσει
 	CompareFunc compare;		// Συνάρτηση για σύγκρηση δεικτών, που πρέπει να δίνεται απο τον χρήστη
@@ -49,11 +50,11 @@ Map map_create(CompareFunc compare, DestroyFunc destroy_key, DestroyFunc destroy
 	// Δεσμεύουμε κατάλληλα τον χώρο που χρειαζόμαστε για το hash table
 	Map map = malloc(sizeof(*map));
 	map->capacity = prime_sizes[0];
-	map->array = malloc(map->capacity * sizeof(struct map_node));
+	map->list_array = malloc(map->capacity * sizeof(List));
 
 	// Αρχικοποιούμε τους κόμβους που έχουμε σαν διαθέσιμους.
 	for (int i = 0; i < map->capacity; i++)
-		map->array[i].state = EMPTY;
+		map->list_array[i] = list_create(NULL);	// Destroy θα κάνουμε εμείς και όχι η λίστα
 
 	map->size = 0;
 	map->compare = compare;
@@ -72,7 +73,7 @@ int map_size(Map map) {
 static void rehash(Map map) {
 	// Αποθήκευση των παλιών δεδομένων
 	int old_capacity = map->capacity;
-	MapNode old_array = map->array;
+	List *old_list_array = map->list_array;
 
 	// Βρίσκουμε τη νέα χωρητικότητα, διασχίζοντας τη λίστα των πρώτων ώστε να βρούμε τον επόμενο. 
 	int prime_no = sizeof(prime_sizes) / sizeof(int);	// το μέγεθος του πίνακα
@@ -87,57 +88,57 @@ static void rehash(Map map) {
 		map->capacity *= 2;								// LCOV_EXCL_LINE
 
 	// Δημιουργούμε ένα μεγαλύτερο hash table
-	map->array = malloc(map->capacity * sizeof(struct map_node));
+	map->list_array = malloc(map->capacity * sizeof(List));
 	for (int i = 0; i < map->capacity; i++)
-		map->array[i].state = EMPTY;
+		map->list_array[i] = list_create(NULL);
 
 	// Τοποθετούμε ΜΟΝΟ τα entries που όντως περιέχουν ένα στοιχείο (το rehash είναι και μία ευκαιρία να ξεφορτωθούμε τα deleted nodes)
 	map->size = 0;
-	for (int i = 0; i < old_capacity; i++)
-		if (old_array[i].state == OCCUPIED)
-			map_insert(map, old_array[i].key, old_array[i].value);
+	for (int i = 0; i < old_capacity; i++) {
+		for (ListNode node = list_first(old_list_array[i]) ; node != LIST_EOF ; node = list_next(old_list_array[i], node)) {
+			map_insert(map, ((MapNode) list_node_value(old_list_array[i], node))->key, ((MapNode) list_node_value(old_list_array[i], node))->value);
+		}
+	}
 
 	//Αποδεσμεύουμε τον παλιό πίνακα ώστε να μήν έχουμε leaks
-	free(old_array);
+	for (uint i = 0 ; i < old_capacity ; i++) {
+		for (ListNode node = list_first(old_list_array[i]) ; node != LIST_EOF ; node = list_next(old_list_array[i], node)) {
+			free(list_node_value(old_list_array[i], node));	// free MapNode
+		}
+		list_destroy(old_list_array[i]);
+	}
+	free(old_list_array);
 }
 
 // Εισαγωγή στο hash table του ζευγαριού (key, item). Αν το key υπάρχει,
 // ανανέωση του με ένα νέο value, και η συνάρτηση επιστρέφει true.
 
 void map_insert(Map map, Pointer key, Pointer value) {
-	// Σκανάρουμε το Hash Table μέχρι να βρούμε διαθέσιμη θέση για να τοποθετήσουμε το ζευγάρι,
-	// ή μέχρι να βρούμε το κλειδί ώστε να το αντικαταστήσουμε.
-	bool already_in_map = false;
-	uint pos;
-	for (pos = map->hash_function(key) % map->capacity;		// ξεκινώντας από τη θέση που κάνει hash το key
-		map->array[pos].state == OCCUPIED;					// αν φτάσουμε σε EMPTY ή DELETED σταματάμε
-		pos = (pos + 1) % map->capacity) {					// linear probing, γυρνώντας στην αρχή όταν φτάσουμε στη τέλος του πίνακα
+	MapNode newnode;
 
-		if (map->compare(map->array[pos].key, key) == 0) {
-			already_in_map = true;
-			break;
+	ListNode node;
+	uint pos = map->hash_function(key) % map->capacity;
+	List target_list = map->list_array[pos];
+	for (node = list_first(target_list) ; node != LIST_EOF ; node = list_next(target_list, node)) {
+		if (!map->compare(list_node_value(target_list, node)->key, key)) {
+			if (list_node_value(target_list, node)->key != key && map->destroy_key != NULL) {
+				map->destroy_key(list_node_value(target_list, node)->key);
+			}
+			list_node_value(target_list, node)->key = key;
+			if (list_node_value(target_list, node)->value != value && map->destroy_value != NULL) {
+				map->destroy_value(list_node_value(target_list, node)->value);
+			}
+			list_node_value(target_list, node)->value = value;
 		}
 	}
-	MapNode node = &map->array[pos];
-
-	// Σε αυτό το σημείο, το node είναι ο κόμβος στον οποίο θα γίνει εισαγωγή.
-	if (already_in_map) {
-		// Αν αντικαθιστούμε παλιά key/value, τa κάνουμε destropy
-		if (node->key != key && map->destroy_key != NULL)
-			map->destroy_key(node->key);
-
-		if (node->value != value && map->destroy_value != NULL)
-			map->destroy_value(node->value);
-
-	} else {
-		// Νέο στοιχείο, αυξάνουμε τα συνολικά στοιχεία του map
+	if (node == LIST_EOF) {
+		newnode = malloc(sizeof(*node));
+		node->key = key;
+		node->value = value;
+		node->pos = pos;
+		list_insert_next(target_list, LIST_BOF, newnode);
 		map->size++;
 	}
-
-	// Προσθήκη τιμών στον κόμβο
-	node->state = OCCUPIED;
-	node->key = key;
-	node->value = value;
 
 	// Αν με την νέα εισαγωγή ξεπερνάμε το μέγιστο load factor, πρέπει να κάνουμε rehash
 	float load_factor = (float)map->size / map->capacity;
@@ -151,14 +152,23 @@ bool map_remove(Map map, Pointer key) {
 	if (node == MAP_EOF)
 		return false;
 
-	// destroy
-	if (map->destroy_key != NULL)
-		map->destroy_key(node->key);
-	if (map->destroy_value != NULL)
-		map->destroy_value(node->value);
+	List node_parent = map->list_array[node->pos];
+	for (ListNode node = list_first(node_parent) ; list_next(node_parent, node) != NULL ; node = list_next(node_parent, node)) {
+		if (list_node_value(node_parent, list_next(node_parent, node))->key == key) {
+			list_remove_next(node_parent, node);
+		}
+	}
 
-	// θέτουμε ως "deleted", ώστε να μην διακόπτεται η αναζήτηση, αλλά ταυτόχρονα να γίνεται ομαλά η εισαγωγή
-	node->state = DELETED;
+	// destroy
+	if (map->destroy_key != NULL) {
+		map->destroy_key(node->key);
+	}
+	if (map->destroy_value != NULL) {
+		map->destroy_value(node->value);
+	}
+
+	free(node);
+
 	map->size--;
 
 	return true;
@@ -190,15 +200,19 @@ DestroyFunc map_set_destroy_value(Map map, DestroyFunc destroy_value) {
 // Απελευθέρωση μνήμης που δεσμεύει το map
 void map_destroy(Map map) {
 	for (int i = 0; i < map->capacity; i++) {
-		if (map->array[i].state == OCCUPIED) {
-			if (map->destroy_key != NULL)
-				map->destroy_key(map->array[i].key);
-			if (map->destroy_value != NULL)
-				map->destroy_value(map->array[i].value);
+		for (ListNode node = list_first(map->list_array[i]) ; node != LIST_EOF ; node = list_next(map->list_array[i], node)) {
+			if (map->destroy_key != NULL) {
+				map->destroy_key(list_node_value(map->list_array[i], node)->key);
+			}
+			if (map->destroy_value != NULL) {
+				map->destroy_value(list_node_value(map->list_array[i], node)->value);
+			}
+			free(list_node_value(map->list_array[i], node));
 		}
+		list_destroy(map->list_array[i]);
 	}
 
-	free(map->array);
+	free(map->list_array);
 	free(map);
 }
 
@@ -206,18 +220,27 @@ void map_destroy(Map map) {
 
 MapNode map_first(Map map) {
 	//Ξεκινάμε την επανάληψή μας απο το 1ο στοιχείο, μέχρι να βρούμε κάτι όντως τοποθετημένο
-	for (int i = 0; i < map->capacity; i++)
-		if (map->array[i].state == OCCUPIED)
-			return &map->array[i];
+	for (int i = 0; i < map->capacity; i++) {
+		for (ListNode node = list_first(map->list_array[i]) ; node != LIST_EOF ; node = list_next(map->list_array[i], node)) {
+			return list_node_value(map->list_array[i], node);
+		}
+	}
 
 	return MAP_EOF;
 }
 
 MapNode map_next(Map map, MapNode node) {
-	// Το node είναι pointer στο i-οστό στοιχείο του array, οπότε node - array == i  (pointer arithmetic!)
-	for (int i = node - map->array + 1; i < map->capacity; i++)
-		if (map->array[i].state == OCCUPIED)
-			return &map->array[i];
+	for (ListNode listnode = list_first(map->list_array[node->pos]) ; listnode != LIST_EOF ; listnode = list_next(map->list_array[node->pos], listnode)) {
+		if (list_node_value(map->list_array[node->pos], listnode) == node) {
+			if (list_next(map->list_array[node->pos], listnode) != NULL) {
+				return list_node_value(map->list_array[node->pos], list_next(map->list_array[node->pos], listnode));
+			}
+			break;
+		}
+	}
+	if ((node->pos + 1) < map->capacity) {
+		return list_node_value(map->list_array[node->pos + 1], list_first(map->list_array[node->pos + 1]));
+	}
 
 	return MAP_EOF;
 }
@@ -231,21 +254,11 @@ Pointer map_node_value(Map map, MapNode node) {
 }
 
 MapNode map_find_node(Map map, Pointer key) {
-	// Διασχίζουμε τον πίνακα, ξεκινώντας από τη θέση που κάνει hash το key, και για όσο δε βρίσκουμε EMPTY
-	int count = 0;
-	for (uint pos = map->hash_function(key) % map->capacity;		// ξεκινώντας από τη θέση που κάνει hash το key
-		map->array[pos].state != EMPTY;							// αν φτάσουμε σε EMPTY σταματάμε
-		pos = (pos + 1) % map->capacity) {						// linear probing, γυρνώντας στην αρχή όταν φτάσουμε στη τέλος του πίνακα
-
-		// Μόνο σε OCCUPIED θέσεις (όχι DELETED), ελέγχουμε αν το key είναι εδώ
-		if (map->array[pos].state == OCCUPIED && map->compare(map->array[pos].key, key) == 0)
-			return &map->array[pos];
-
-		// Αν διασχίσουμε ολόκληρο τον πίνακα σταματάμε. Εφόσον ο πίνακας δεν μπορεί να είναι όλος OCCUPIED,
-		// αυτό μπορεί να συμβεί μόνο στην ακραία περίπτωση που ο πίνακας έχει γεμίσει DELETED τιμές!
-		count++;
-		if (count == map->capacity)
-			break;
+	List target_list = map->list_array[map->hash_function(key) % map->capacity];
+	for (ListNode listnode = list_first(target_list) ; listnode != LIST_EOF ; listnode = list_next(target_list, listnode)) {
+		if (((MapNode) list_node_value(target_list, listnode))->key == key) {
+			return list_node_value(target_list, listnode);
+		}
 	}
 
 	return MAP_EOF;

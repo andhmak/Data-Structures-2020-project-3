@@ -6,8 +6,7 @@
 //
 ///////////////////////////////////////////////////////////////////
 
-#pragma once // #include το πολύ μία φορά
-
+#include "DiseaseMonitor.h"
 #include "ADTList.h"
 
 // Οι ημερομηνίες δίνονται σαν Strings, σε format YYYY-MM-DD, πχ "2019-10-31"
@@ -23,19 +22,24 @@ struct record {
 	String country;		// Χώρα
 	Date date;			// Ημερομηνία, σε μορφή YYYY-MM-DD
 };
+
 typedef struct record* Record;
 
 
 // Αρχικοποιεί όλες τις δομές του monitor, πρέπει να κληθεί πριν από οποιαδήποτε άλλη κλήση.
 // Αν υπήρχαν ήδη δεδομένα τα διαγράφει καλώντας την dm_destroy.
 
-void dm_init();
+void dm_init() {
+
+}
 
 // Καταστρέφει όλες τις δομές του monitor, απελευθερώνοντας την αντίστοιχη
 // μνήμη. ΔΕΝ κάνει free τα records, αυτά δημιουργούνται και καταστρέφονται από
 // τον χρήστη.
 
-void dm_destroy();
+void dm_destroy() {
+
+}
 
 
 // Προσθέτει την εγγραφή record στο monitor. Δεν δεσμεύει νέα μνήμη (ούτε
@@ -46,12 +50,16 @@ void dm_destroy();
 // Οι αλλαγές στα δεδομένα της εγγραφής απαγορεύονται μέχρι να γίνει remove από
 // τον monitor.
 
-bool dm_insert_record(Record record);
+bool dm_insert_record(Record record) {
+
+}
 
 // Αφαιρεί την εγγραφή με το συγκεκριμένο id από το σύστημα (χωρίς free, είναι
 // ευθύνη του χρήστη). Επιστρέφει true αν υπήρχε τέτοια εγγραφή, αλλιώς false.
 
-bool dm_remove_record(int id);
+bool dm_remove_record(int id) {
+
+}
 
 
 // Monitor queries
@@ -73,11 +81,15 @@ bool dm_remove_record(int id);
 // Επιστρέφει λίστα με τα Records που ικανοποιούν τα συγκεκριμένα κριτήρια, σε
 // οποιαδήποτε σειρά.
 
-List dm_get_records(String disease, String country, Date date_from, Date date_to);
+List dm_get_records(String disease, String country, Date date_from, Date date_to) {
+
+}
 
 // Επιστρέφει τον αριθμό εγγραφών που ικανοποιούν τα συγκεκριμένα κριτήρια.
 
-int dm_count_records(String disease, String country, Date date_from, Date date_to);
+int dm_count_records(String disease, String country, Date date_from, Date date_to) {
+
+}
 
 // Επιστρέφει τις k ασθένειες με τις περισσότερες εγγραφές που ικανοποιούν τo
 // κριτήριο country (μπορεί να είναι NULL) _ταξινομημένες_ με βάση τον αριθμό
@@ -87,5 +99,6 @@ int dm_count_records(String disease, String country, Date date_from, Date date_t
 // περισσότερες εγγραφές στη Γερμανία. Επιστρέφονται _μόνο_ ασθένειες με
 // __τουλάχιστον 1 εγγραφή__ (που ικανοποιεί τα κριτήρια).
 
-List dm_top_diseases(int k, String country);
+List dm_top_diseases(int k, String country) {
 
+}
