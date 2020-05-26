@@ -96,13 +96,13 @@ static void rehash(Map map) {
 	map->size = 0;
 	for (int i = 0; i < old_capacity; i++) {
 		for (ListNode node = list_first(old_list_array[i]) ; node != LIST_EOF ; node = list_next(old_list_array[i], node)) {
-			map_insert(map, ((MapNode) list_node_value(old_list_array[i], node))->key, ((MapNode) list_node_value(old_list_array[i], node))->value);
+			map_insert(map, ((MapNode) list_node_value(old_list_array[i], node))->key, ((MapNode) list_node_value(old_list_array[i], node))->value);////////////////////////
 		}
 	}
 
 	//Αποδεσμεύουμε τον παλιό πίνακα ώστε να μήν έχουμε leaks
 	for (uint i = 0 ; i < old_capacity ; i++) {
-		for (ListNode node = list_first(old_list_array[i]) ; node != LIST_EOF ; node = list_next(old_list_array[i], node)) {
+		for (ListNode node = list_first(old_list_array[i]) ; node != LIST_EOF ; node = list_next(old_list_array[i], node)) {////////////
 			free(list_node_value(old_list_array[i], node));	// free MapNode
 		}
 		list_destroy(old_list_array[i]);
@@ -120,22 +120,22 @@ void map_insert(Map map, Pointer key, Pointer value) {
 	uint pos = map->hash_function(key) % map->capacity;
 	List target_list = map->list_array[pos];
 	for (node = list_first(target_list) ; node != LIST_EOF ; node = list_next(target_list, node)) {
-		if (!map->compare(list_node_value(target_list, node)->key, key)) {
-			if (list_node_value(target_list, node)->key != key && map->destroy_key != NULL) {
-				map->destroy_key(list_node_value(target_list, node)->key);
+		if (!map->compare(((MapNode)list_node_value(target_list, node))->key, key)) {
+			if (((MapNode)list_node_value(target_list, node))->key != key && map->destroy_key != NULL) {
+				map->destroy_key(((MapNode)list_node_value(target_list, node))->key);
 			}
-			list_node_value(target_list, node)->key = key;
-			if (list_node_value(target_list, node)->value != value && map->destroy_value != NULL) {
-				map->destroy_value(list_node_value(target_list, node)->value);
+			((MapNode)list_node_value(target_list, node))->key = key;
+			if (((MapNode)list_node_value(target_list, node))->value != value && map->destroy_value != NULL) {
+				map->destroy_value(((MapNode)list_node_value(target_list, node))->value);
 			}
-			list_node_value(target_list, node)->value = value;
+			((MapNode)list_node_value(target_list, node))->value = value;
 		}
 	}
 	if (node == LIST_EOF) {
-		newnode = malloc(sizeof(*node));
-		node->key = key;
-		node->value = value;
-		node->pos = pos;
+		newnode = malloc(sizeof(*newnode));
+		newnode->key = key;
+		newnode->value = value;
+		newnode->pos = pos;
 		list_insert_next(target_list, LIST_BOF, newnode);
 		map->size++;
 	}
@@ -154,7 +154,7 @@ bool map_remove(Map map, Pointer key) {
 
 	List node_parent = map->list_array[node->pos];
 	for (ListNode node = list_first(node_parent) ; list_next(node_parent, node) != NULL ; node = list_next(node_parent, node)) {
-		if (list_node_value(node_parent, list_next(node_parent, node))->key == key) {
+		if (((MapNode)list_node_value(node_parent, list_next(node_parent, node)))->key == key) {
 			list_remove_next(node_parent, node);
 		}
 	}
@@ -202,10 +202,10 @@ void map_destroy(Map map) {
 	for (int i = 0; i < map->capacity; i++) {
 		for (ListNode node = list_first(map->list_array[i]) ; node != LIST_EOF ; node = list_next(map->list_array[i], node)) {
 			if (map->destroy_key != NULL) {
-				map->destroy_key(list_node_value(map->list_array[i], node)->key);
+				map->destroy_key(((MapNode) list_node_value(map->list_array[i], node))->key);
 			}
 			if (map->destroy_value != NULL) {
-				map->destroy_value(list_node_value(map->list_array[i], node)->value);
+				map->destroy_value(((MapNode)list_node_value(map->list_array[i], node))->value);
 			}
 			free(list_node_value(map->list_array[i], node));
 		}
