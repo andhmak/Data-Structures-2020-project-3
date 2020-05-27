@@ -129,6 +129,7 @@ void map_insert(Map map, Pointer key, Pointer value) {
 				map->destroy_value(((MapNode)list_node_value(target_list, node))->value);
 			}
 			((MapNode)list_node_value(target_list, node))->value = value;
+			break;
 		}
 	}
 	if (node == LIST_EOF) {
@@ -153,9 +154,14 @@ bool map_remove(Map map, Pointer key) {
 		return false;
 
 	List node_parent = map->list_array[node->pos];
-	for (ListNode node = list_first(node_parent) ; list_next(node_parent, node) != NULL ; node = list_next(node_parent, node)) {
-		if (((MapNode)list_node_value(node_parent, list_next(node_parent, node)))->key == key) {
-			list_remove_next(node_parent, node);
+	if (list_size(node_parent) == 1) {
+		list_remove_next(node_parent, LIST_BOF);
+	}
+	else {
+		for (ListNode listnode = list_first(node_parent) ; list_next(node_parent, listnode) != NULL ; listnode = list_next(node_parent, listnode)) {
+			if (((MapNode)list_node_value(node_parent, list_next(node_parent, listnode))) == node) {
+				list_remove_next(node_parent, listnode);
+			}
 		}
 	}
 
@@ -238,8 +244,10 @@ MapNode map_next(Map map, MapNode node) {
 			break;
 		}
 	}
-	if ((node->pos + 1) < map->capacity) {
-		return list_node_value(map->list_array[node->pos + 1], list_first(map->list_array[node->pos + 1]));
+	for (uint i = node->pos + 1 ; i < map->capacity ; i++) {
+		if (list_size(map->list_array[i])) {
+			return list_node_value(map->list_array[i], list_first(map->list_array[i]));
+		}
 	}
 
 	return MAP_EOF;
