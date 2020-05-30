@@ -23,7 +23,6 @@ int prime_sizes[] = {53, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 4915
 struct map_node {
 	Pointer key;		// Το κλειδί που χρησιμοποιείται για να hash-αρουμε
 	Pointer value;  	// Η τιμή που αντισtοιχίζεται στο παραπάνω κλειδί
-	uint pos;
 };
 
 // Δομή του Map (περιέχει όλες τις πληροφορίες που χρεαζόμαστε για το HashTable)
@@ -128,7 +127,6 @@ void map_insert(Map map, Pointer key, Pointer value) {
 		newnode = malloc(sizeof(*newnode));
 		newnode->key = key;
 		newnode->value = value;
-		newnode->pos = pos;
 		list_insert_next(target_list, LIST_BOF, newnode);
 		map->size++;
 	}
@@ -145,7 +143,7 @@ bool map_remove(Map map, Pointer key) {
 	if (node == MAP_EOF)
 		return false;
 
-	List node_parent = map->list_array[node->pos];
+	List node_parent = map->list_array[map->hash_function(node->key) % map->capacity];
 	if (((MapNode)list_node_value(node_parent, list_first(node_parent))) == node) {
 		list_remove_next(node_parent, LIST_BOF);
 	}
@@ -229,15 +227,17 @@ MapNode map_first(Map map) {
 }
 
 MapNode map_next(Map map, MapNode node) {
-	for (ListNode listnode = list_first(map->list_array[node->pos]) ; listnode != LIST_EOF ; listnode = list_next(map->list_array[node->pos], listnode)) {
-		if (list_node_value(map->list_array[node->pos], listnode) == node) {
-			if (list_next(map->list_array[node->pos], listnode) != NULL) {
-				return list_node_value(map->list_array[node->pos], list_next(map->list_array[node->pos], listnode));
+	uint pos = map->hash_function(node->key) % map->capacity;
+	List parent = map->list_array[pos];
+	for (ListNode listnode = list_first(parent) ; listnode != LIST_EOF ; listnode = list_next(parent, listnode)) {
+		if (list_node_value(parent, listnode) == node) {
+			if (list_next(parent, listnode) != NULL) {
+				return list_node_value(parent, list_next(parent, listnode));
 			}
 			break;
 		}
 	}
-	for (uint i = node->pos + 1 ; i < map->capacity ; i++) {
+	for (uint i = pos + 1 ; i < map->capacity ; i++) {
 		if (list_size(map->list_array[i])) {
 			return list_node_value(map->list_array[i], list_first(map->list_array[i]));
 		}
