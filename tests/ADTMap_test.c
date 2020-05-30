@@ -122,7 +122,7 @@ void test_remove(void) {
 
 		map_insert(map, key_array[i], value_array[i]);
 		// Ανά τακτά χρονικά διαστήματα διαγράφουμε κάποιο κλειδί που μόλις βάλαμε
-		if (i % (N / 20) == 0) 
+		if (i % 2 == 0)	// έγινε μια αλλαγή εδώ για να πιάνει ένα bug στην map_remove που δεν το έπιανε πριν
 			TEST_ASSERT(map_remove(map, key_array[i]));
 	}
 
@@ -134,7 +134,7 @@ void test_remove(void) {
 	// Διαγράφουμε όλους τους κόμβους και ελέγχουμε εάν η τιμή που μας επιστρέφει η map_remove είναι σωστή
 	for (int i = 0; i < N; i++) {
 		// (Αν δεν το έχουμε διαγράψει ήδη)
-		if (i % (N / 20) != 0) {
+		if (i % 2 != 0) {
 			TEST_ASSERT(map_remove(map, key_array[i]));
 		}
 	}

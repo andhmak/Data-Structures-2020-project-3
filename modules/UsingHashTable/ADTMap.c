@@ -9,14 +9,6 @@
 #include "ADTMap.h"
 #include "ADTList.h"
 
-
-// Οι κόμβοι του map στην υλοποίηση με hash table, μπορούν να είναι σε 3 διαφορετικές καταστάσεις,
-// ώστε αν διαγράψουμε κάποιον κόμβο, αυτός να μην είναι empty, ώστε να μην επηρεάζεται η αναζήτηση
-// αλλά ούτε occupied, ώστε η εισαγωγή να μπορεί να το κάνει overwrite.
-typedef enum {
-	EMPTY, OCCUPIED, DELETED
-} State;
-
 // Το μέγεθος του Hash Table ιδανικά θέλουμε να είναι πρώτος αριθμός σύμφωνα με την θεωρία.
 // Η παρακάτω λίστα περιέχει πρώτους οι οποίοι έχουν αποδεδιγμένα καλή συμπεριφορά ως μεγέθη.
 // Κάθε re-hash θα γίνεται βάσει αυτής της λίστας. Αν χρειάζονται παραπάνω απο 1610612741 στοχεία, τότε σε καθε rehash διπλασιάζουμε το μέγεθος.
@@ -30,7 +22,7 @@ int prime_sizes[] = {53, 97, 193, 389, 769, 1543, 3079, 6151, 12289, 24593, 4915
 // Δομή του κάθε κόμβου που έχει το hash table (με το οποίο υλοιποιούμε το map)
 struct map_node {
 	Pointer key;		// Το κλειδί που χρησιμοποιείται για να hash-αρουμε
-	Pointer value;  	// Η τιμή που αντισοιχίζεται στο παραπάνω κλειδί
+	Pointer value;  	// Η τιμή που αντισtοιχίζεται στο παραπάνω κλειδί
 	uint pos;
 };
 
@@ -154,13 +146,14 @@ bool map_remove(Map map, Pointer key) {
 		return false;
 
 	List node_parent = map->list_array[node->pos];
-	if (list_size(node_parent) == 1) {
+	if (((MapNode)list_node_value(node_parent, list_first(node_parent))) == node) {
 		list_remove_next(node_parent, LIST_BOF);
 	}
 	else {
 		for (ListNode listnode = list_first(node_parent) ; list_next(node_parent, listnode) != NULL ; listnode = list_next(node_parent, listnode)) {
 			if (((MapNode)list_node_value(node_parent, list_next(node_parent, listnode))) == node) {
 				list_remove_next(node_parent, listnode);
+				break;
 			}
 		}
 	}
