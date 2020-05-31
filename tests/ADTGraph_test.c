@@ -66,6 +66,9 @@ void test_insert() {
 
 	List vertex_list = graph_get_vertices(graph);
 	TEST_ASSERT(list_size(vertex_list) == N);
+	for (int i = 0 ; i < N ; i++) {
+		TEST_ASSERT(list_find(vertex_list, vertex_array[i], compare_vertices) != NULL);
+	}
 	list_destroy(vertex_list);
 
 	List neighb_list = graph_get_adjacent(graph, vertex_array[0]);

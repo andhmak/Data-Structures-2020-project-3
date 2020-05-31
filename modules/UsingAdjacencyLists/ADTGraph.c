@@ -7,6 +7,7 @@
 #include "ADTGraph.h"
 #include "common_types.h"
 #include "ADTList.h"			// Ορισμένες συναρτήσεις επιστρέφουν λίστες
+#include "ADTPriorityQueue.h"
 #include <stdlib.h>
 #include <limits.h>
 
@@ -15,9 +16,7 @@
 typedef struct graph* Graph;
 
 struct graph {
-    List vertices;
     Map vertex_list_map;
-    int size;
 };
 
 typedef struct edge* Edge;
@@ -33,25 +32,21 @@ struct edge {
 
 Graph graph_create(CompareFunc compare, DestroyFunc destroy_vertex) {
     Graph graph = malloc(sizeof(*graph));
-    graph->vertices = list_create(NULL);
     graph->vertex_list_map = map_create(compare, destroy_vertex, (DestroyFunc) list_destroy);
-    graph->size = 0;
     return graph;
 }
 
 // Επιστρέφει τον αριθμό στοιχείων (κορυφών) που περιέχει ο γράφος graph.
 
 int graph_size(Graph graph) {
-    return graph->size;
+    return map_size(graph->vertex_list_map);
 }
 
 // Προσθέτει μια κορυφή στο γράφο.
 
 void graph_insert_vertex(Graph graph, Pointer vertex) {
-    list_insert_next(graph->vertices, LIST_BOF, vertex);
     List neighb_list = list_create(free);
     map_insert(graph->vertex_list_map, vertex, neighb_list);
-    graph->size++;
 }
 
 // Επιστρέφει λίστα με όλες τις κορυφές του γράφου. Η λίστα δημιουργείται σε κάθε
@@ -59,16 +54,11 @@ void graph_insert_vertex(Graph graph, Pointer vertex) {
 
 List graph_get_vertices(Graph graph) {
     List newlist = list_create(NULL);
-    if (list_size(graph->vertices) == 0) {
+    if (map_size(graph->vertex_list_map) == 0) {
         return newlist;
     }
-    ListNode oldnode = list_first(graph->vertices), newnode;
-    list_insert_next(newlist, LIST_BOF, list_node_value(graph->vertices, oldnode));
-    for (newnode = list_first(newlist), oldnode = list_next(graph->vertices, oldnode);
-        oldnode != LIST_EOF;
-        newnode = list_next(newlist, newnode), oldnode = list_next(graph->vertices, oldnode))
-    {
-        list_insert_next(newlist, newnode, list_node_value(graph->vertices, oldnode));
+    for (MapNode node = map_first(graph->vertex_list_map) ; node != MAP_EOF ; node = map_next(graph->vertex_list_map, node)) {
+        list_insert_next(newlist, LIST_BOF, map_node_key(graph->vertex_list_map, node));
     }
     return newlist;
 }
@@ -97,26 +87,10 @@ void graph_remove_vertex(Graph graph, Pointer vertex) {
     if (list_size(neighb_list) == 0) {
         a = 0;
     }
-    if (list_node_value(graph->vertices, list_first(graph->vertices)) == vertex) {
-        list_remove_next(graph->vertices, LIST_BOF);
-    }
-    else {
-        ListNode node;
-        for (node = list_first(graph->vertices) ; list_next(graph->vertices, node) != LIST_EOF ; node = list_next(graph->vertices, node)) {
-            if (list_node_value(graph->vertices, list_next(graph->vertices, node)) == vertex) {
-                list_remove_next(graph->vertices, node);
-                break;
-            }
-        }
-        if (list_next(graph->vertices, node) == LIST_EOF) {
-           exit(2);
-        }
-    }
     if (a) {
         exit(1);
     }
     map_remove(graph->vertex_list_map, vertex);
-    graph->size--;
 }
 
 // Προσθέτει μια ακμή με βάρος weight στο γράφο.
@@ -210,7 +184,9 @@ List graph_get_adjacent(Graph graph, Pointer vertex) {
 // κάθε κληση και είναι ευθύνη του χρήστη να κάνει list_destroy.
 
 List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
-    return NULL;
+    List list = list_create(NULL);
+    
+    return list;
 }
 
 // Ελευθερώνει όλη τη μνήμη που δεσμεύει ο γράφος.
@@ -218,7 +194,6 @@ List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
 
 void graph_destroy(Graph graph) {
     map_destroy(graph->vertex_list_map);
-    list_destroy(graph->vertices);
     free(graph);
 }
 
