@@ -190,7 +190,45 @@ void test_remove() {
 }
 
 void test_shortest_path() {
+	Graph graph = graph_create(compare_vertices, free);
+	graph_set_hash_function(graph, hash_pointer);
 
+	int N = 1000;
+	int** vertex_array = malloc(N * sizeof(*vertex_array));
+
+	for (int i = 0; i < N; i++) {
+		vertex_array[i] = create_int(i);
+	}
+
+	// Ανακατεύουμε το key_array ώστε να υπάρχει ομοιόμορφη εισαγωγή τιμών
+	shuffle(vertex_array, N);
+	// Δοκιμάζουμε την insert εισάγοντας κάθε φορά νέους κόμβους
+	for (int i = 0; i < N; i++) {
+		// Εισαγωγή, δοκιμή και έλεγχος ότι ενημερώθηκε το size
+		graph_insert_vertex(graph, vertex_array[i]);
+		if (i) {
+			graph_insert_edge(graph, vertex_array[i - 1], vertex_array[i], i);
+		}
+	}
+
+	List path = graph_shortest_path(graph, vertex_array[0], vertex_array[N - 1]);
+	TEST_ASSERT(list_size(path) == N);
+	int i;
+	ListNode node;
+	for (i = 0, node = list_first(path) ; i < 0 ; i++, node = list_next(path, node)) {
+		TEST_ASSERT(list_node_value(path, node) == vertex_array[i]);
+	}
+	list_destroy(path);
+	
+	graph_insert_edge(graph, vertex_array[0], vertex_array[N - 1], 1);
+	path = graph_shortest_path(graph, vertex_array[0], vertex_array[N - 1]);
+	TEST_ASSERT(list_size(path) == 2);
+	TEST_ASSERT((list_node_value(path, list_first(path)) == vertex_array[0]) &&
+	(list_node_value(path, list_next(path, list_first(path))) == vertex_array[N - 1]));
+	list_destroy(path);
+
+	graph_destroy(graph);
+	free(vertex_array);
 }
 
 // Λίστα με όλα τα tests προς εκτέλεση

@@ -17,6 +17,8 @@ typedef struct graph* Graph;
 
 struct graph {
     Map vertex_list_map;
+    HashFunc hash;
+    CompareFunc compare;
 };
 
 typedef struct edge* Edge;
@@ -33,6 +35,7 @@ struct edge {
 Graph graph_create(CompareFunc compare, DestroyFunc destroy_vertex) {
     Graph graph = malloc(sizeof(*graph));
     graph->vertex_list_map = map_create(compare, destroy_vertex, (DestroyFunc) list_destroy);
+    graph->compare = compare;
     return graph;
 }
 
@@ -66,29 +69,20 @@ List graph_get_vertices(Graph graph) {
 // Διαγράφει μια κορυφή από τον γράφο (αν υπάρχουν ακμές διαγράφονται επίσης).
 
 void graph_remove_vertex(Graph graph, Pointer vertex) {
-    List neighb_list = map_node_value(graph->vertex_list_map, map_find_node(graph->vertex_list_map, vertex));
-    int a = 1;
+    List neighb_list = map_find(graph->vertex_list_map, vertex);
     List neighb_neighb_list;
     for (ListNode listnode = list_first(neighb_list) ; listnode != LIST_EOF ; listnode = list_next(neighb_list, listnode)) {
-        neighb_neighb_list = map_node_value(graph->vertex_list_map, map_find_node(graph->vertex_list_map, ((Edge)list_node_value(neighb_list, listnode))->neighb_vertex));
+        neighb_neighb_list = map_find(graph->vertex_list_map, ((Edge)list_node_value(neighb_list, listnode))->neighb_vertex);
         if (((Edge)list_node_value(neighb_neighb_list, list_first(neighb_neighb_list)))->neighb_vertex == vertex) {
             list_remove_next(neighb_neighb_list, LIST_BOF);
-            a=0;
             continue;
         }
         for (ListNode listnode2 = list_first(neighb_neighb_list) ; list_next(neighb_neighb_list, listnode2) != LIST_EOF ; listnode2 = list_next(neighb_neighb_list, listnode2)) {
             if (((Edge)list_node_value(neighb_neighb_list, list_next(neighb_neighb_list, listnode2)))->neighb_vertex == vertex) {
                 list_remove_next(neighb_neighb_list, listnode2);
-                a=0;
                 break;
             }
         }
-    }
-    if (list_size(neighb_list) == 0) {
-        a = 0;
-    }
-    if (a) {
-        exit(1);
     }
     map_remove(graph->vertex_list_map, vertex);
 }
@@ -99,58 +93,46 @@ void graph_insert_edge(Graph graph, Pointer vertex1, Pointer vertex2, uint weigh
     Edge edge1 = malloc(sizeof(*edge1)), edge2 = malloc(sizeof(*edge2));
     edge1->neighb_vertex = vertex2;
     edge1->weight = weight;
-    list_insert_next((List) map_node_value(graph->vertex_list_map, map_find_node(graph->vertex_list_map, vertex1)), LIST_BOF, edge1);
+    list_insert_next((List) map_find(graph->vertex_list_map, vertex1), LIST_BOF, edge1);
     edge2->neighb_vertex = vertex1;
     edge2->weight = weight;
-    list_insert_next((List) map_node_value(graph->vertex_list_map, map_find_node(graph->vertex_list_map, vertex2)), LIST_BOF, edge2);
+    list_insert_next((List) map_find(graph->vertex_list_map, vertex2), LIST_BOF, edge2);
 }
 
 // Αφαιρεί μια ακμή από το γράφο.
 
 void graph_remove_edge(Graph graph, Pointer vertex1, Pointer vertex2) {
-    List list1 = map_node_value(graph->vertex_list_map, map_find_node(graph->vertex_list_map, vertex1));
-    List list2 = map_node_value(graph->vertex_list_map, map_find_node(graph->vertex_list_map, vertex2));
+    List list1 = map_find(graph->vertex_list_map, vertex1);
+    List list2 = map_find(graph->vertex_list_map, vertex2);
     ListNode listnode;
-    int a = 1;
     if (((Edge)list_node_value(list1, list_first(list1)))->neighb_vertex == vertex2) {
         list_remove_next(list1, LIST_BOF);
-        a = 0;
     }
     else {
         for (listnode = list_first(list1) ; list_next(list1, listnode) != LIST_EOF ; listnode = list_next(list1, listnode)) {
             if (((Edge)list_node_value(list1, list_next(list1, listnode)))->neighb_vertex == vertex2) {
                 list_remove_next(list1, listnode);
-                a = 0;
                 break;
             }
         }
     }
-    if (a) {
-        exit(3);
-    }
-    a = 1;
     if (((Edge)list_node_value(list2, list_first(list2)))->neighb_vertex == vertex1) {
         list_remove_next(list2, LIST_BOF);
-        a = 0;
     }
     else {
         for (listnode = list_first(list2) ; list_next(list2, listnode) != LIST_EOF ; listnode = list_next(list2, listnode)) {
             if (((Edge)list_node_value(list2, list_next(list1, listnode)))->neighb_vertex == vertex1) {
                 list_remove_next(list2, listnode);
-                a = 0;
                 break;
             }
         }
-    }
-    if (a) {
-        exit(4);
     }
 }
 
 // Επιστρέφει το βάρος της ακμής ανάμεσα στις δύο κορυφές, ή UINT_MAX αν δεν είναι γειτονικές.
 
 uint graph_get_weight(Graph graph, Pointer vertex1, Pointer vertex2) {
-    List neighb_list = map_node_value(graph->vertex_list_map, map_find_node(graph->vertex_list_map, vertex1));
+    List neighb_list = map_find(graph->vertex_list_map, vertex1);
     for (ListNode listnode = list_first(neighb_list) ; listnode != LIST_EOF ; listnode = list_next(neighb_list, listnode)) {
         if (((Edge)list_node_value(neighb_list, listnode))->neighb_vertex == vertex2) {
             return ((Edge)list_node_value(neighb_list, listnode))->weight;
@@ -164,7 +146,7 @@ uint graph_get_weight(Graph graph, Pointer vertex1, Pointer vertex2) {
 
 List graph_get_adjacent(Graph graph, Pointer vertex) {
     List newlist = list_create(NULL);
-    List oldlist = map_node_value(graph->vertex_list_map, map_find_node(graph->vertex_list_map, vertex));
+    List oldlist = map_find(graph->vertex_list_map, vertex);
     if (list_size(oldlist) == 0) {
         return newlist;
     }
@@ -183,10 +165,73 @@ List graph_get_adjacent(Graph graph, Pointer vertex) {
 // target, ή κενή λίστα αν δεν υπάρχει κανένα μονοπάτι. Η λίστα δημιουργείται σε
 // κάθε κληση και είναι ευθύνη του χρήστη να κάνει list_destroy.
 
+typedef struct search_node* SearchNode;
+
+struct search_node {
+    Pointer vertex;
+    SearchNode prev;
+    PriorityQueueNode pqnode;
+    int dist;
+    bool in;
+};
+
+int compare_distances(Pointer a, Pointer b) {
+    return ((SearchNode) b)->dist - ((SearchNode) a)->dist;
+}
+
 List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
-    List list = list_create(NULL);
-    
-    return list;
+    List path = list_create(NULL);
+    Map search_map = map_create(graph->compare, NULL, free);
+    map_set_hash_function(search_map, graph->hash);
+    SearchNode searchnode;
+    for (MapNode mapnode = map_first(graph->vertex_list_map) ; mapnode != MAP_EOF ; mapnode = map_next(graph->vertex_list_map, mapnode)) {
+        searchnode = malloc(sizeof(*searchnode));
+        searchnode->dist = INT_MAX;
+        searchnode->in = false;
+        searchnode->prev = NULL;
+        searchnode->vertex = map_node_key(graph->vertex_list_map, mapnode);
+        map_insert(search_map, searchnode->vertex, searchnode);
+    }
+    PriorityQueue dist_pqueue = pqueue_create(compare_distances, NULL, NULL);
+    PriorityQueueNode pqnode;
+    for (MapNode mapnode = map_first(search_map) ; mapnode != MAP_EOF ; mapnode = map_next(search_map, mapnode)) {
+        pqnode = pqueue_insert(dist_pqueue, map_node_value(search_map, mapnode));
+        ((SearchNode)map_node_value(search_map, mapnode))->pqnode = pqnode;
+    }
+    (searchnode = map_find(search_map, source))->dist = 0;
+    pqueue_update_order(dist_pqueue, searchnode->pqnode);
+    List edges;
+    int alt;
+    SearchNode neighb;
+    while (pqueue_size(dist_pqueue)) {
+        if ((searchnode = pqueue_max(dist_pqueue))->vertex == target) {
+            break;
+        }
+        pqueue_remove_max(dist_pqueue);
+        searchnode->in = true;
+        edges = map_find(graph->vertex_list_map, searchnode->vertex);
+        for (ListNode listnode = list_first(edges) ; listnode != LIST_EOF ; listnode = list_next(edges, listnode)) {
+            neighb = map_find(search_map, ((Edge)list_node_value(edges, listnode))->neighb_vertex);
+            if (neighb->in) {
+                continue;
+            }
+            alt = searchnode->dist + ((Edge)list_node_value(edges, listnode))->weight;
+            if (alt < neighb->dist) {
+                neighb->dist = alt;
+                neighb->prev = searchnode;
+                pqueue_update_order(dist_pqueue, neighb->pqnode);
+            }
+        }
+    }
+    pqueue_destroy(dist_pqueue);
+    if ((searchnode = map_find(search_map, target))->prev == NULL) {
+        return path;
+    }
+    for ( ; searchnode != NULL ; searchnode = searchnode->prev) {
+        list_insert_next(path, LIST_BOF, searchnode->vertex);
+    }
+    map_destroy(search_map);
+    return path;
 }
 
 // Ελευθερώνει όλη τη μνήμη που δεσμεύει ο γράφος.
@@ -208,4 +253,5 @@ void graph_destroy(Graph graph) {
 
 void graph_set_hash_function(Graph graph, HashFunc hash_func) {
     map_set_hash_function(graph->vertex_list_map, hash_func);
+    graph->hash = hash_func;
 }

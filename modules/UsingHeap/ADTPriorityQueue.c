@@ -239,8 +239,10 @@ void pqueue_remove_node(PriorityQueue pqueue, PriorityQueueNode node) {
  	// κόμβο οου μετακινήθηκε, ο οποίος μπορεί να είναι μικρότερος από κάποιο παιδί του
 	// ή μεγαλύτερος από τον πατέρα του. Αρα μπορούμε να επαναφέρουμε την ιδιότητα του
  	// σωρού καλώντας τη bubble_down και την bubble_up για τη τον κόμβο.
-	bubble_up(pqueue, id);
-	bubble_down(pqueue, id);
+	if (vector_size(pqueue->vector) != id - 1) {	// Αν ο κόμβος που αφαιρέθηκε δεν ήταν τελευταίος
+		bubble_up(pqueue, id);
+		bubble_down(pqueue, id);
+	}
 
 	if (pqueue->destroy_value != NULL) {
         pqueue->destroy_value(node->value);
@@ -259,8 +261,10 @@ static void pqueue_remove_node_nofree(PriorityQueue pqueue, PriorityQueueNode no
  	// κόμβο οου μετακινήθηκε, ο οποίος μπορεί να είναι μικρότερος από κάποιο παιδί του
 	// ή μεγαλύτερος από τον πατέρα του. Αρα μπορούμε να επαναφέρουμε την ιδιότητα του
  	// σωρού καλώντας τη bubble_down και την bubble_up για τη τον κόμβο.
-	bubble_up(pqueue, id);
-	bubble_down(pqueue, id);
+	if (vector_size(pqueue->vector) != id - 1) {	// Αν ο κόμβος που αφαιρέθηκε δεν ήταν τελευταίος
+		bubble_up(pqueue, id);
+		bubble_down(pqueue, id);
+	}
 }
 
 // Προσθέτει τον κόμβο node
