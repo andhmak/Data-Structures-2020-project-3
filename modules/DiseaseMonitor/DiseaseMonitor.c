@@ -6,31 +6,73 @@
 //
 ///////////////////////////////////////////////////////////////////
 
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
 #include "DiseaseMonitor.h"
 #include "ADTList.h"
+#include "ADTMap.h"
+#include "ADTSet.h"
 
-// Οι ημερομηνίες δίνονται σαν Strings, σε format YYYY-MM-DD, πχ "2019-10-31"
-typedef String Date;
+uint hash_dis_country(Pointer value) {
+	String total = strcat(((Record) value)->country, ((Record) value)->disease);
+	return hash_string(total);
+}
 
-// O monitor αποθηκεύει εγγραφές του παρακάτω τύπου
-// _Ολα_ τα πεδία πρέπει να _υπάρχουν_ και να _μην είναι NULL_
+uint hash_disease(Pointer value) {
+	return hash_string(((Record) value)->disease);
+}
 
-struct record {
-	int id;				// Μοναδικό id της εγγραφής
-	String name;		// Όνομά
-	String disease;		// Ασθένεια
-	String country;		// Χώρα
-	Date date;			// Ημερομηνία, σε μορφή YYYY-MM-DD
-};
+uint hash_country(Pointer value) {
+	return hash_string(((Record) value)->country);
+}
 
-typedef struct record* Record;
+int compare_record_dates(Pointer a, Pointer b) {
+	int result = strcmp(((Record) a)->date, ((Record) a)->date);
+	if (result) {
+		return result;
+	}
+	return ((Record) a)->id - ((Record) a)->id;
+}
 
+int compare_records_dis_country(Pointer a, Pointer b) {
+	int result = strcmp(((Record) a)->country, ((Record) b)->country);
+	if (result) {
+		return result;
+	}
+	return strcmp(((Record) a)->disease, ((Record) b)->disease);
+}
+
+int compare_countries(Pointer a, Pointer b) {
+	return strcmp(((Record) a)->country, ((Record) b)->country);
+}
+
+int compare_diseases(Pointer a, Pointer b) {
+	return strcmp(((Record) a)->disease, ((Record) b)->disease);
+}
+
+int compare_ids(Pointer a, Pointer b) {
+	return ((Record) a)->id - ((Record) b)->id;
+}
+
+uint hash_id(Pointer value) {
+	return ((Record) value)->id;
+}
+
+static Map dm_map, id_map, dis_map, country_map;
 
 // Αρχικοποιεί όλες τις δομές του monitor, πρέπει να κληθεί πριν από οποιαδήποτε άλλη κλήση.
 // Αν υπήρχαν ήδη δεδομένα τα διαγράφει καλώντας την dm_destroy.
 
 void dm_init() {
-
+	dm_map = map_create(compare_records_dis_country, NULL, (DestroyFunc) set_destroy);
+	map_set_hash_function(dm_map, hash_dis_country);
+	dis_map = map_create(compare_diseases, NULL, (DestroyFunc) set_destroy);
+	map_set_hash_function(dis_map, hash_disease);
+	country_map = map_create(compare_countries, NULL, (DestroyFunc) set_destroy);
+	map_set_hash_function(country_map, hash_country);
+	id_map =  map_create(compare_ids, NULL, NULL);
+	map_set_hash_function(id_map, hash_id);
 }
 
 // Καταστρέφει όλες τις δομές του monitor, απελευθερώνοντας την αντίστοιχη
@@ -38,7 +80,10 @@ void dm_init() {
 // τον χρήστη.
 
 void dm_destroy() {
-
+	map_destroy(dm_map);
+	map_destroy(id_map);
+	map_destroy(dis_map);
+	map_destroy(country_map);
 }
 
 
@@ -51,14 +96,73 @@ void dm_destroy() {
 // τον monitor.
 
 bool dm_insert_record(Record record) {
-
+	Set dest_set;
+	map_insert(id_map, record, record);
+	bool a;
+	if ((dest_set = map_find(dis_map, record))) {
+		set_insert(dest_set, record);
+	}
+	else {
+		dest_set = set_create(compare_record_dates, NULL);
+		map_insert(dis_map, record, dest_set);
+		set_insert(dest_set, record);
+	}
+	if ((dest_set = map_find(country_map, record))) {
+		set_insert(dest_set, record);
+	}
+	else {
+		dest_set = set_create(compare_record_dates, NULL);
+		map_insert(country_map, record, dest_set);
+		set_insert(dest_set, record);
+	}
+	if ((dest_set = map_find(dm_map, record))) {
+		return set_insert(dest_set, record);
+	}
+	else {
+		dest_set = set_create(compare_record_dates, NULL);
+		map_insert(dm_map, record, dest_set);
+		a = set_insert(dest_set, record);
+		if (a) {
+			exit(1);
+		}
+		return a;
+	}
 }
 
 // Αφαιρεί την εγγραφή με το συγκεκριμένο id από το σύστημα (χωρίς free, είναι
 // ευθύνη του χρήστη). Επιστρέφει true αν υπήρχε τέτοια εγγραφή, αλλιώς false.
 
 bool dm_remove_record(int id) {
-
+	Record temp_record = malloc(sizeof(*temp_record));
+	temp_record->id = id;
+	Record record = map_find(id_map, temp_record);
+	if (record == NULL) {
+		return false;
+	}
+	map_remove(id_map, temp_record);
+	free(temp_record);
+	Set set = map_find(dm_map, record);
+	if (set_remove(set, record) == 0) {
+		exit(2);
+	}
+	if (set_size(set) == 0) {
+		map_remove(dm_map, record);
+	}
+	set = map_find(dis_map, record);
+	if (set_remove(set, record) == 0) {
+		exit(3);
+	}
+	if (set_size(set) == 0) {
+		map_remove(dis_map, record);
+	}
+	set = map_find(country_map, record);
+	if (set_remove(set, record) == 0) {
+		exit(4);
+	}
+	if (set_size(set) == 0) {
+		map_remove(country_map, record);
+	}
+	return true;
 }
 
 
@@ -82,13 +186,32 @@ bool dm_remove_record(int id) {
 // οποιαδήποτε σειρά.
 
 List dm_get_records(String disease, String country, Date date_from, Date date_to) {
-
+	Map searchmap = dm_map;
+	if (disease == NULL) {
+		searchmap = country_map;
+	}
+	if (country == NULL) {
+		searchmap = dis_map;
+	}
+	Record record1 = malloc(sizeof(*record1));
+	record1->disease = disease;
+	record1->country = country;
+	Set searchset = map_find(searchmap, record1);
+	Record record2 = malloc(sizeof(*record2));
+	record1->date = date_from;
+	record1->id = 0;
+	record2->date = date_to;
+	record2->id = INT_MAX;
+	List list = set_return_from_to(searchset, record1, record2);
+	free(record1);
+	free(record2);
+	return list;
 }
 
 // Επιστρέφει τον αριθμό εγγραφών που ικανοποιούν τα συγκεκριμένα κριτήρια.
 
 int dm_count_records(String disease, String country, Date date_from, Date date_to) {
-
+	return 1;
 }
 
 // Επιστρέφει τις k ασθένειες με τις περισσότερες εγγραφές που ικανοποιούν τo
@@ -100,5 +223,5 @@ int dm_count_records(String disease, String country, Date date_from, Date date_t
 // __τουλάχιστον 1 εγγραφή__ (που ικανοποιεί τα κριτήρια).
 
 List dm_top_diseases(int k, String country) {
-
+	return NULL;
 }

@@ -285,3 +285,11 @@ uint hash_int(Pointer value) {
 uint hash_pointer(Pointer value) {
 	return (size_t)value;				// cast σε sizt_t, που έχει το ίδιο μήκος με έναν pointer
 }
+
+HashFunc map_get_hash_function(Map map) {
+	return map->hash_function;
+}
+
+CompareFunc map_get_compare(Map map) {
+	return map->compare;
+}

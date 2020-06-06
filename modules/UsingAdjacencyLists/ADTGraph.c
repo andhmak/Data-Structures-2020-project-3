@@ -17,8 +17,6 @@ typedef struct graph* Graph;
 
 struct graph {
     Map vertex_list_map;
-    HashFunc hash;
-    CompareFunc compare;
 };
 
 typedef struct edge* Edge;
@@ -35,7 +33,6 @@ struct edge {
 Graph graph_create(CompareFunc compare, DestroyFunc destroy_vertex) {
     Graph graph = malloc(sizeof(*graph));
     graph->vertex_list_map = map_create(compare, destroy_vertex, (DestroyFunc) list_destroy);
-    graph->compare = compare;
     return graph;
 }
 
@@ -181,8 +178,8 @@ int compare_distances(Pointer a, Pointer b) {
 
 List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
     List path = list_create(NULL);
-    Map search_map = map_create(graph->compare, NULL, free);
-    map_set_hash_function(search_map, graph->hash);
+    Map search_map = map_create(map_get_compare(graph->vertex_list_map), NULL, free);
+    map_set_hash_function(search_map, map_get_hash_function(graph->vertex_list_map));
     SearchNode searchnode;
     for (MapNode mapnode = map_first(graph->vertex_list_map) ; mapnode != MAP_EOF ; mapnode = map_next(graph->vertex_list_map, mapnode)) {
         searchnode = malloc(sizeof(*searchnode));
@@ -253,5 +250,4 @@ void graph_destroy(Graph graph) {
 
 void graph_set_hash_function(Graph graph, HashFunc hash_func) {
     map_set_hash_function(graph->vertex_list_map, hash_func);
-    graph->hash = hash_func;
 }
