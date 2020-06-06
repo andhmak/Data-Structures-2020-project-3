@@ -562,5 +562,5 @@ static int node_count_less_than(Set set, SetNode node, Pointer min) {
 }
 
 int set_count_less_than(Set set, Pointer min) {
-	return node_count_greater_than(set, set->root, min);
+	return node_count_less_than(set, set->root, min);
 }

@@ -101,6 +101,13 @@ typedef void (*VisitFunc)(Pointer value);
 void set_visit(Set set, VisitFunc visit);
 
 // Επιστρέφει μια λίστα με τους τα στοιχεία από το from μέχρι το to (σύμφωνα με την compare) με πολυπλοκότητα O(logn)
-// για σταθερό m, με n όλα τα στοιχεία και m αυτά που θα επιστραφούν
+// για σταθερό m, με n όλα τα στοιχεία και m αυτά που θα επιστραφούν.
 
 List set_return_from_to(Set set, Pointer from, Pointer to);
+
+// Μετρούν τους τα στοιχεία του set μεγαλύτερα από max ή μικρότερα από min, σύμφωνα με την compare, αντίστοιχα.
+// Έχουν πολυπλοκότητα O(logn) ως προς το μέγεθος του set, ανεξάρτητα από το πλήθος των στοιχείων που μετρούνται.
+
+int set_count_greater_than(Set set, Pointer max);
+
+int set_count_less_than(Set set, Pointer min);

@@ -211,7 +211,27 @@ List dm_get_records(String disease, String country, Date date_from, Date date_to
 // Επιστρέφει τον αριθμό εγγραφών που ικανοποιούν τα συγκεκριμένα κριτήρια.
 
 int dm_count_records(String disease, String country, Date date_from, Date date_to) {
-	return 1;
+	Map searchmap = dm_map;
+	if (disease == NULL) {
+		searchmap = country_map;
+	}
+	if (country == NULL) {
+		searchmap = dis_map;
+	}
+	Record temp_record = malloc(sizeof(*temp_record));
+	temp_record->disease = disease;
+	temp_record->country = country;
+	Set searchset = map_find(searchmap, temp_record);
+	temp_record->date = date_from;
+	temp_record->id = 0;
+	int before = set_count_less_than(searchset, temp_record);
+	temp_record->date = date_to;
+	temp_record->id = INT_MAX;
+	int after = set_count_greater_than(searchset, temp_record);
+	if (set_size(searchset) - before - after < 0) {
+		exit(6);
+	}
+	return set_size(searchset) - before - after;
 }
 
 // Επιστρέφει τις k ασθένειες με τις περισσότερες εγγραφές που ικανοποιούν τo
