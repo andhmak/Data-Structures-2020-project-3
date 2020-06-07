@@ -142,6 +142,7 @@ bool dm_remove_record(int id) {
 	temp_record->id = id;
 	Record record = map_find(id_map, temp_record);
 	if (record == NULL) {
+		free(temp_record);
 		return false;
 	}
 	map_remove(id_map, temp_record);
