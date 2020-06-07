@@ -257,7 +257,7 @@ Pointer map_node_value(Map map, MapNode node) {
 MapNode map_find_node(Map map, Pointer key) {
 	List target_list = map->list_array[map->hash_function(key) % map->capacity];
 	for (ListNode listnode = list_first(target_list) ; listnode != LIST_EOF ; listnode = list_next(target_list, listnode)) {
-		if (((MapNode) list_node_value(target_list, listnode))->key == key) {
+		if (!map->compare(((MapNode) list_node_value(target_list, listnode))->key, key)) {
 			return list_node_value(target_list, listnode);
 		}
 	}
