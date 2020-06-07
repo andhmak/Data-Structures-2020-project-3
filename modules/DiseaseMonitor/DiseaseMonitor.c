@@ -15,7 +15,9 @@
 #include "ADTSet.h"
 
 uint hash_dis_country(Pointer value) {
-	String total = strcat(((Record) value)->country, ((Record) value)->disease);
+	char total[strlen(((Record) value)->disease) + strlen(((Record) value)->country) + 1];
+	strcpy(total, ((Record) value)->disease);
+	strcat(total, ((Record) value)->country);
 	return hash_string(total);
 }
 
@@ -28,11 +30,11 @@ uint hash_country(Pointer value) {
 }
 
 int compare_record_dates(Pointer a, Pointer b) {
-	int result = strcmp(((Record) a)->date, ((Record) a)->date);
+	int result = strcmp(((Record) a)->date, ((Record) b)->date);
 	if (result) {
 		return result;
 	}
-	return ((Record) a)->id - ((Record) a)->id;
+	return ((Record) a)->id - ((Record) b)->id;
 }
 
 int compare_records_dis_country(Pointer a, Pointer b) {
@@ -60,7 +62,7 @@ uint hash_id(Pointer value) {
 }
 
 static Map dm_map, id_map, dis_map, country_map;
-
+static Set total_set;
 // Αρχικοποιεί όλες τις δομές του monitor, πρέπει να κληθεί πριν από οποιαδήποτε άλλη κλήση.
 // Αν υπήρχαν ήδη δεδομένα τα διαγράφει καλώντας την dm_destroy.
 
@@ -73,6 +75,7 @@ void dm_init() {
 	map_set_hash_function(country_map, hash_country);
 	id_map =  map_create(compare_ids, NULL, NULL);
 	map_set_hash_function(id_map, hash_id);
+	total_set = set_create(compare_record_dates, NULL);
 }
 
 // Καταστρέφει όλες τις δομές του monitor, απελευθερώνοντας την αντίστοιχη
@@ -84,6 +87,7 @@ void dm_destroy() {
 	map_destroy(id_map);
 	map_destroy(dis_map);
 	map_destroy(country_map);
+	set_destroy(total_set);
 }
 
 
@@ -98,6 +102,7 @@ void dm_destroy() {
 bool dm_insert_record(Record record) {
 	Set dest_set;
 	map_insert(id_map, record, record);
+	set_insert(total_set, record);
 	bool a;
 	if ((dest_set = map_find(dis_map, record))) {
 		set_insert(dest_set, record);
@@ -162,6 +167,9 @@ bool dm_remove_record(int id) {
 	if (set_size(set) == 0) {
 		map_remove(country_map, record);
 	}
+	if (set_remove(total_set, record) == 0) {
+		exit(9);
+	}
 	return true;
 }
 
@@ -187,22 +195,30 @@ bool dm_remove_record(int id) {
 
 List dm_get_records(String disease, String country, Date date_from, Date date_to) {
 	Map searchmap = dm_map;
-	if (disease == NULL) {
-		searchmap = country_map;
+	Set searchset;
+	if ((disease != NULL) || (country != NULL)) {
+		if (disease == NULL) {
+			searchmap = country_map;
+		}
+		if (country == NULL) {
+			searchmap = dis_map;
+		}
+		Record temp_record = malloc(sizeof(*temp_record));
+		temp_record->disease = disease;
+		temp_record->country = country;
+		searchset = map_find(searchmap, temp_record);
+		free(temp_record);
 	}
-	if (country == NULL) {
-		searchmap = dis_map;
+	else {
+		searchset = total_set;
 	}
 	Record record1 = malloc(sizeof(*record1));
-	record1->disease = disease;
-	record1->country = country;
-	Set searchset = map_find(searchmap, record1);
-	Record record2 = malloc(sizeof(*record2));
 	record1->date = date_from;
 	record1->id = 0;
+	Record record2 = malloc(sizeof(*record2));
 	record2->date = date_to;
 	record2->id = INT_MAX;
-	List list = set_return_from_to(searchset, record1, record2);
+	List list = set_return_from_to(searchset, (date_from != NULL) ? record1 : NULL, (date_to != NULL) ? record2 : NULL);
 	free(record1);
 	free(record2);
 	return list;
@@ -212,22 +228,31 @@ List dm_get_records(String disease, String country, Date date_from, Date date_to
 
 int dm_count_records(String disease, String country, Date date_from, Date date_to) {
 	Map searchmap = dm_map;
-	if (disease == NULL) {
-		searchmap = country_map;
+	Set searchset;
+	if ((disease != NULL) || (country != NULL)) {
+		if (disease == NULL) {
+			searchmap = country_map;
+		}
+		if (country == NULL) {
+			searchmap = dis_map;
+		}
+		Record temp_record = malloc(sizeof(*temp_record));
+		temp_record->disease = disease;
+		temp_record->country = country;
+		searchset = map_find(searchmap, temp_record);
+		free(temp_record);
 	}
-	if (country == NULL) {
-		searchmap = dis_map;
+	else {
+		searchset = total_set;
 	}
-	Record temp_record = malloc(sizeof(*temp_record));
-	temp_record->disease = disease;
-	temp_record->country = country;
-	Set searchset = map_find(searchmap, temp_record);
-	temp_record->date = date_from;
-	temp_record->id = 0;
-	int before = set_count_less_than(searchset, temp_record);
-	temp_record->date = date_to;
-	temp_record->id = INT_MAX;
-	int after = set_count_greater_than(searchset, temp_record);
+	Record date_record = malloc(sizeof(*date_record));
+	date_record->date = date_from;
+	date_record->id = 0;
+	int before = (date_from != NULL) ? set_count_less_than(searchset, date_record) : 0;
+	date_record->date = date_to;
+	date_record->id = INT_MAX;
+	int after = (date_to != NULL) ? set_count_greater_than(searchset, date_record) : 0;
+	free(date_record);
 	if (set_size(searchset) - before - after < 0) {
 		exit(6);
 	}

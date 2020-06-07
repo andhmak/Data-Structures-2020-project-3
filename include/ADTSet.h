@@ -102,6 +102,7 @@ void set_visit(Set set, VisitFunc visit);
 
 // Επιστρέφει μια λίστα με τους τα στοιχεία από το from μέχρι το to (σύμφωνα με την compare) με πολυπλοκότητα O(logn)
 // για σταθερό m, με n όλα τα στοιχεία και m αυτά που θα επιστραφούν.
+// Αν from ή to είναι NULL δεν τίθεται κάτω ή πάνω όριο, αντίστοιχα.
 
 List set_return_from_to(Set set, Pointer from, Pointer to);
 

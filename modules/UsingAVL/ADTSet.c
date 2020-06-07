@@ -510,13 +510,13 @@ static void node_return_from_to(Set set, SetNode node, Pointer from, Pointer to,
     if (node == NULL) {
 		return;
 	}
-	if (set->compare(node->value, to) < 0) {
+	if ((to == NULL) || (set->compare(node->value, to) < 0)) {
         node_return_from_to(set, node->right, from, to, list);
     }
-    if ((set->compare(node->value, from) >= 0) && (set->compare(node->value, to) <= 0)) {
+    if (((from == NULL) || (set->compare(node->value, from) >= 0)) && ((to == NULL) || (set->compare(node->value, to) <= 0))) {
     	list_insert_next(list, LIST_BOF, node->value);
     }
-    if (set->compare(node->value, from) > 0) {
+    if ((from == NULL) || (set->compare(node->value, from) > 0)) {
 	    node_return_from_to(set, node->left, from, to, list);
     }
 }
@@ -540,6 +540,9 @@ static int node_count_greater_than(Set set, SetNode node, Pointer max) {
 	else if (set->compare(node->value, max) > 0) {
 		return ((node->right != NULL) ? node->right->size : 0) + 1 + node_count_greater_than(set, node->left, max);
 	}
+	if (1) {
+		exit(7);
+	}
 }
 
 int set_count_greater_than(Set set, Pointer max) {
@@ -558,6 +561,9 @@ static int node_count_less_than(Set set, SetNode node, Pointer min) {
 	}
 	else if (set->compare(node->value, min) > 0) {
 		return node_count_less_than(set, node->left, min);
+	}
+	if (1) {
+		exit(9);
 	}
 }
 
