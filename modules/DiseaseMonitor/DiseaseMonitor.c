@@ -15,6 +15,8 @@
 #include "ADTSet.h"
 #include "ADTPriorityQueue.h"
 
+// Struct που αποθηκεύει μια ασθένεια και το πλήθος κρουσμάτων αυτής.
+
 typedef struct dis_count* DisCount;
 
 struct dis_count {
@@ -49,7 +51,7 @@ int compare_record_dates(Pointer a, Pointer b) {
 	return ((Record) a)->id - ((Record) b)->id;
 }
 
-int compare_records_dis_country(Pointer a, Pointer b) {
+int compare_records_country_dis(Pointer a, Pointer b) {
 	int result = strcmp(((Record) a)->country, ((Record) b)->country);
 	if (result) {
 		return result;
@@ -73,7 +75,7 @@ int compare_cases(Pointer a, Pointer b) {
 	return ((DisCount) a)->cases - ((DisCount) b)->cases;
 }
 
-static Map dm_map, id_map, dis_map, country_map, country_to_pq, country_dis_to_pqnode, dis_to_pqnode;
+static Map country_dis_map, id_map, dis_map, country_map, country_to_pq, country_dis_to_pqnode, dis_to_pqnode;
 static Set total_set;
 static PriorityQueue total_pq;
 
@@ -81,8 +83,8 @@ static PriorityQueue total_pq;
 // Αν υπήρχαν ήδη δεδομένα τα διαγράφει καλώντας την dm_destroy.
 
 void dm_init() {
-	dm_map = map_create(compare_records_dis_country, NULL, (DestroyFunc) set_destroy);
-	map_set_hash_function(dm_map, hash_dis_country);
+	country_dis_map = map_create(compare_records_country_dis, NULL, (DestroyFunc) set_destroy);
+	map_set_hash_function(country_dis_map, hash_dis_country);
 	dis_map = map_create(compare_diseases, NULL, (DestroyFunc) set_destroy);
 	map_set_hash_function(dis_map, hash_disease);
 	country_map = map_create(compare_countries, NULL, (DestroyFunc) set_destroy);
@@ -91,7 +93,7 @@ void dm_init() {
 	map_set_hash_function(id_map, hash_id);
 	country_to_pq = map_create(compare_countries, NULL, (DestroyFunc) pqueue_destroy);
 	map_set_hash_function(country_to_pq, hash_country);
-	country_dis_to_pqnode = map_create(compare_records_dis_country, NULL, NULL);
+	country_dis_to_pqnode = map_create(compare_records_country_dis, NULL, NULL);
 	map_set_hash_function(country_dis_to_pqnode, hash_dis_country);
 	dis_to_pqnode = map_create(compare_diseases, NULL, NULL);
 	map_set_hash_function(dis_to_pqnode, hash_disease);
@@ -104,7 +106,7 @@ void dm_init() {
 // τον χρήστη.
 
 void dm_destroy() {
-	map_destroy(dm_map);
+	map_destroy(country_dis_map);
 	map_destroy(id_map);
 	map_destroy(dis_map);
 	map_destroy(country_map);
@@ -183,12 +185,12 @@ bool dm_insert_record(Record record) {
 		map_insert(dis_to_pqnode, record, node);
 	}
 
-	if ((dest_set = map_find(dm_map, record))) {
+	if ((dest_set = map_find(country_dis_map, record))) {
 		return set_insert(dest_set, record);
 	}
 	else {
 		dest_set = set_create(compare_record_dates, NULL);
-		map_insert(dm_map, record, dest_set);
+		map_insert(country_dis_map, record, dest_set);
 		return set_insert(dest_set, record);
 	}
 }
@@ -206,10 +208,10 @@ bool dm_remove_record(int id) {
 	}
 	map_remove(id_map, temp_record);
 	free(temp_record);
-	Set set = map_find(dm_map, record);
+	Set set = map_find(country_dis_map, record);
 	set_remove(set, record);
 	if (set_size(set) == 0) {
-		map_remove(dm_map, record);
+		map_remove(country_dis_map, record);
 	}
 	set = map_find(dis_map, record);
 	set_remove(set, record);
@@ -273,7 +275,7 @@ bool dm_remove_record(int id) {
 // οποιαδήποτε σειρά.
 
 List dm_get_records(String disease, String country, Date date_from, Date date_to) {
-	Map searchmap = dm_map;
+	Map searchmap = country_dis_map;
 	Set searchset;
 	if ((disease != NULL) || (country != NULL)) {
 		if (disease == NULL) {
@@ -306,7 +308,7 @@ List dm_get_records(String disease, String country, Date date_from, Date date_to
 // Επιστρέφει τον αριθμό εγγραφών που ικανοποιούν τα συγκεκριμένα κριτήρια.
 
 int dm_count_records(String disease, String country, Date date_from, Date date_to) {
-	Map searchmap = dm_map;
+	Map searchmap = country_dis_map;
 	Set searchset;
 	if ((disease != NULL) || (country != NULL)) {
 		if (disease == NULL) {
@@ -347,7 +349,7 @@ int dm_count_records(String disease, String country, Date date_from, Date date_t
 // __τουλάχιστον 1 εγγραφή__ (που ικανοποιεί τα κριτήρια).
 
 List dm_top_diseases(int k, String country) {
-	List top;
+	List top_nodes, top_diseases = list_create(NULL);
 	PriorityQueue diseases;
 	if (country != NULL) {
 		Record temp = malloc(sizeof(*temp));
@@ -358,6 +360,16 @@ List dm_top_diseases(int k, String country) {
 	else {
 		diseases = total_pq;
 	}
-	top = pqueue_top_k(diseases, k);
-	return top;
+	top_nodes = pqueue_top_k(diseases, k);
+	if (list_size(top_nodes)) {
+		list_insert_next(top_diseases, LIST_BOF, ((DisCount) list_node_value(top_nodes, list_first(top_nodes)))->disease);
+	}
+	ListNode node1, node2;
+	for (node1 = list_next(top_nodes, list_first(top_nodes)), node2 = list_first(top_diseases);
+		node1 != LIST_EOF;
+		node1 = list_next(top_nodes, node1), node2 = list_next(top_diseases, node2)) {
+			list_insert_next(top_diseases, node2, ((DisCount) list_node_value(top_nodes, node1))->disease);
+	}
+	list_destroy(top_nodes);
+	return top_diseases;
 }
