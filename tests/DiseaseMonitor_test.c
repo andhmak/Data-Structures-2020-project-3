@@ -151,6 +151,10 @@ void test_get_records(void) {
 	int ids7[] = {8, 9};
 	check_record_list(list7, ids7, sizeof(ids7)/sizeof(int));
 
+	List list8 = dm_get_records(NULL, "Snow", "0299-01-01", "0301-01-01");	// Περίπτωση που δεν υπάρχουν εγγραφές
+	int ids8[] = {};
+	check_record_list(list8, ids8, 0);
+
 	dm_destroy();
 }
 
@@ -179,6 +183,7 @@ void test_count_records(void) {
 	count_and_test(NULL,        NULL,        NULL,         "0297-01-01");
 	count_and_test("Grayscale", NULL,        "0299-01-01", "0300-01-01");
 	count_and_test(NULL,        "Lannister", "0299-01-01", "0301-01-01");
+	count_and_test(NULL,        "Snow",		 "0299-01-01", "0301-01-01");	// Περίπτωση που δεν υπάρχουν εγγραφές
 
 	dm_destroy();
 }
@@ -216,6 +221,8 @@ void test_top_diseases(void) {
 
 	for (int k = 1; k <= 6; k++)
 		run_and_test_top_diseases(k, NULL);
+
+	TEST_ASSERT(list_size(dm_top_diseases(5, "Snow")) == 0);		// Περίπτωση που δεν υπάρχουν εγγραφές
 
 	dm_destroy();
 }

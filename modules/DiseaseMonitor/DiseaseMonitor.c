@@ -293,6 +293,9 @@ List dm_get_records(String disease, String country, Date date_from, Date date_to
 	else {
 		searchset = total_set;
 	}
+	if (searchset == NULL) {
+		return list_create(NULL);
+	}
 	Record record1 = malloc(sizeof(*record1));
 	record1->date = date_from;
 	record1->id = 0;
@@ -359,6 +362,9 @@ List dm_top_diseases(int k, String country) {
 	}
 	else {
 		diseases = total_pq;
+	}
+	if (diseases == NULL) {
+		return top_diseases;
 	}
 	top_nodes = pqueue_top_k(diseases, k);
 	if (list_size(top_nodes)) {
