@@ -9,6 +9,7 @@
 
 #include "ADTPriorityQueue.h"
 #include "ADTVector.h"			// Η υλοποίηση του PriorityQueue χρησιμοποιεί Vector
+#include "ADTList.h"
 
 // Ενα PriorityQueue είναι pointer σε αυτό το struct
 struct priority_queue {
@@ -285,4 +286,45 @@ void pqueue_update_order(PriorityQueue pqueue, PriorityQueueNode node) {
 	pqueue_remove_node_nofree(pqueue, node);
 	// Ξαναπροσθέτουμε τον κόμβο
 	pqueue_insert_node(pqueue, node);
+}
+
+static PriorityQueueNode pqueue_remove_and_return_max(PriorityQueue pqueue) {
+	int last_node = pqueue_size(pqueue);
+	assert(last_node != 0);		// LCOV_EXCL_LINE
+
+	PriorityQueueNode max_node = node_value(pqueue, 1);
+
+	// Αντικαθιστούμε τον πρώτο κόμβο με τον τελευταίο και αφαιρούμε τον τελευταίο
+	node_swap(pqueue, 1, last_node);
+	vector_remove_last(pqueue->vector);
+
+ 	// Ολοι οι κόμβοι ικανοποιούν την ιδιότητα του σωρού εκτός από τη νέα ρίζα
+ 	// που μπορεί να είναι μικρότερη από κάποιο παιδί της. Αρα μπορούμε να
+ 	// επαναφέρουμε την ιδιότητα του σωρού καλώντας τη bubble_down για τη ρίζα.
+	bubble_down(pqueue, 1);
+
+	return max_node;
+}
+
+List pqueue_top_k(PriorityQueue pqueue, int k) {
+	List top = list_create(NULL);
+	Vector removed_nodes = vector_create(0, NULL);
+	if (vector_size(pqueue->vector)) {
+		list_insert_next(top, LIST_BOF, ((PriorityQueueNode) node_value(pqueue, 1))->value);
+		vector_insert_last(removed_nodes, pqueue_remove_and_return_max(pqueue));
+	}
+	int i;
+	ListNode listnode;
+	for (i = 0, listnode = list_first(top) ; i < k - 1 ; i++, listnode = list_next(top, listnode)) {
+		if (vector_size(pqueue->vector) == 0) {
+			break;
+		}
+		list_insert_next(top, listnode, ((PriorityQueueNode) node_value(pqueue, 1))->value);
+		vector_insert_last(removed_nodes, pqueue_remove_and_return_max(pqueue));
+	}
+	for (i = 0 ; i < vector_size(removed_nodes) ; i++) {
+		pqueue_insert_node(pqueue, vector_get_at(removed_nodes, i));
+	}
+	vector_destroy(removed_nodes);
+	return top;
 }

@@ -11,7 +11,7 @@ UsingAdjacencyLists_ADTGraph_test_OBJS = ADTGraph_test.o $(MODULES)/UsingAdjacen
 
 # DiseaseMonitor
 #
-DiseaseMonitor_test_OBJS	= DiseaseMonitor_test.o $(MODULES)/DiseaseMonitor/DiseaseMonitor.o $(MODULES)/UsingHashTable/ADTMap.o $(MODULES)/UsingLinkedList/ADTList.o $(MODULES)/UsingAVL/ADTSet.o
+DiseaseMonitor_test_OBJS	= DiseaseMonitor_test.o $(MODULES)/DiseaseMonitor/DiseaseMonitor.o $(MODULES)/UsingHashTable/ADTMap.o $(MODULES)/UsingLinkedList/ADTList.o $(MODULES)/UsingAVL/ADTSet.o $(MODULES)/UsingHeap/ADTPriorityQueue.o $(MODULES)/UsingDynamicArray/ADTVector.o
 # DiseaseMonitor_test_OBJS = DiseaseMonitor_test.o $(MODULES)/DiseaseMonitor.o ...
 
 # Ο βασικός κορμός του Makefile

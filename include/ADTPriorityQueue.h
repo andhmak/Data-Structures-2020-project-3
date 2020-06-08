@@ -11,6 +11,7 @@
 
 #include "common_types.h"
 #include "ADTVector.h"
+#include "ADTList.h"
 
 
 // Μία ουρά προτεραιότητας αναπαριστάται από τον τύπο PriorityQueue
@@ -83,3 +84,8 @@ void pqueue_remove_node(PriorityQueue pqueue, PriorityQueueNode node);
 // - η κλήση οποιασδήποτε άλλης συνάρτησης pqueue_*
 
 void pqueue_update_order(PriorityQueue pqueue, PriorityQueueNode node);
+
+// Επιστρέφει μια ταξινομημένη λίστα με τις max{k, pqueue_size} μέγιστες εγγραφές στην pqueue
+// με πολυπλοκότητα Ο(k*logn) σε αυτήν την υλοποίηση
+
+List pqueue_top_k(PriorityQueue pqueue, int k);
