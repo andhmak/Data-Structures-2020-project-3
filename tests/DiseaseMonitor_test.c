@@ -192,7 +192,7 @@ void run_and_test_top_diseases(int k, String country) {
 
 	for (ListNode node = list_first(result); node != LIST_EOF; node = list_next(result, node)) {
 		String disease = list_node_value(result, node);
-		int count = dm_count_records(country, disease, NULL, NULL);
+		int count = dm_count_records(disease, country, NULL, NULL);
 		TEST_ASSERT(count <= last_count);
 		last_count = count;
 	}
