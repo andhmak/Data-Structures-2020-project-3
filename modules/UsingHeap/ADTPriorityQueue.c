@@ -288,6 +288,8 @@ void pqueue_update_order(PriorityQueue pqueue, PriorityQueueNode node) {
 	pqueue_insert_node(pqueue, node);
 }
 
+// Αφαιρεί και επιστρέφει τον μέγιστο κόμβο χωρίς να απελευθερώσει μνήμη
+
 static PriorityQueueNode pqueue_remove_and_return_max(PriorityQueue pqueue) {
 	int last_node = pqueue_size(pqueue);
 	assert(last_node != 0);		// LCOV_EXCL_LINE
@@ -303,12 +305,20 @@ static PriorityQueueNode pqueue_remove_and_return_max(PriorityQueue pqueue) {
  	// επαναφέρουμε την ιδιότητα του σωρού καλώντας τη bubble_down για τη ρίζα.
 	bubble_down(pqueue, 1);
 
+	// Επιστρέφουμε τον πρώην μέγιστο κόμβο
 	return max_node;
 }
 
+// Επιστρέφει μια ταξινομημένη λίστα με τις max{k, pqueue_size}
+// μέγιστες εγγραφές στην pqueue με πολυπλοκότητα Ο(k*logn)
+
 List pqueue_top_k(PriorityQueue pqueue, int k) {
 	List top = list_create(NULL);
+
+	// Vector για να κρατάμε τους κόμβους που αφαιρέσαμε για να τους ξαναπροσθέσουμε
 	Vector removed_nodes = vector_create(0, NULL);
+
+	// Προσθέτουμε στο τέλος της λίστας το μέγιστο και μετά το αφαιρούμε, k ή pqueue_size φορές
 	if (vector_size(pqueue->vector)) {
 		list_insert_next(top, LIST_BOF, ((PriorityQueueNode) node_value(pqueue, 1))->value);
 		vector_insert_last(removed_nodes, pqueue_remove_and_return_max(pqueue));
@@ -322,6 +332,8 @@ List pqueue_top_k(PriorityQueue pqueue, int k) {
 		list_insert_next(top, listnode, ((PriorityQueueNode) node_value(pqueue, 1))->value);
 		vector_insert_last(removed_nodes, pqueue_remove_and_return_max(pqueue));
 	}
+
+	// Ξαναπροσθέτουμε τους κόμβους που αφαιρέσαμε
 	for (i = 0 ; i < vector_size(removed_nodes) ; i++) {
 		pqueue_insert_node(pqueue, vector_get_at(removed_nodes, i));
 	}

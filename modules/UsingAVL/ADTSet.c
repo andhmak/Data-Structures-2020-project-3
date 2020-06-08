@@ -506,16 +506,24 @@ bool set_is_proper(Set node) {
 
 // LCOV_EXCL_STOP
 
+// Επιστρέφει μια λίστα με τους τα στοιχεία από το from μέχρι το to (σύμφωνα με την compare) με πολυπλοκότητα O(logn)
+// (σε αυτήν την υλοποίηση) για σταθερό m, με n όλα τα στοιχεία και m αυτά που θα επιστραφούν.
+// Αν from ή to είναι NULL δεν τίθεται κάτω ή πάνω όριο, αντίστοιχα.
+
 static void node_return_from_to(Set set, SetNode node, Pointer from, Pointer to, List list) {
+	// Σταματάμε αν φτάσουμε στον "πάτο"
     if (node == NULL) {
 		return;
 	}
+	// Κατεβαίνουμε δεξιά μόνο αν δεν έχουμε φτάσει το πάνω όριο
 	if ((to == NULL) || (set->compare(node->value, to) < 0)) {
         node_return_from_to(set, node->right, from, to, list);
     }
+	// Αν ο κόμβος είναι μέσα στα όριο προστίθεται στην λίστα
     if (((from == NULL) || (set->compare(node->value, from) >= 0)) && ((to == NULL) || (set->compare(node->value, to) <= 0))) {
     	list_insert_next(list, LIST_BOF, node->value);
     }
+	// Κατεβαίνουμε αριστερά μόνο αν δεν έχουμε φτάσει το κάτω όριο
     if ((from == NULL) || (set->compare(node->value, from) > 0)) {
 	    node_return_from_to(set, node->left, from, to, list);
     }
@@ -523,44 +531,67 @@ static void node_return_from_to(Set set, SetNode node, Pointer from, Pointer to,
 
 List set_return_from_to(Set set, Pointer from, Pointer to) {
     List list = list_create(NULL);
+
+	// Καλούμε την αντίστοιχη αναδρομική συνάρτηση για την ρίζα και της δίνουμε την λίστα
     node_return_from_to(set, set->root, from, to, list);
 	return list;
 }
 
+// Μετρούν τους τα στοιχεία του set μεγαλύτερα από max ή μικρότερα από min, σύμφωνα με την compare, αντίστοιχα.
+// Έχουν πολυπλοκότητα O(logn) (σε αυτήν την υλοποίηση) ως προς το μέγεθος του set, ανεξάρτητα από το πλήθος των στοιχείων που μετρούνται.
+
 static int node_count_greater_than(Set set, SetNode node, Pointer max) {
+	// Σταματάμε αν φτάσουμε στον "πάτο"
 	if (node == NULL) {
 		return 0;
 	}
+	// Αν ο κόμβος είναι μικρότερος από το max, το πλήθος στοιχείων μεγαλύτερων του max
+	// στο δέντρο που ορίζει θα είναι το ίδιο με το πλήθος τους στο δεξιό υποδέντρο
 	else if (set->compare(node->value, max) < 0) {
 		return node_count_greater_than(set, node->right, max);
 	}
+	// Αν βρεθεί κόμβος ίσος με το max, το πλήθος στοιχείων μεγαλύτερων του max
+	// στο δέντρο που ορίζει θα είναι το μέγεθος του δεξιού υποδέντρου
 	else if (set->compare(node->value, max) == 0) {
 		return ((node->right != NULL) ? node->right->size : 0);
 	}
+	// Αν ο κόμβος είναι μεγαλύτερος από το max, το πλήθος στοιχείων μεγαλύτερων του max
+	// στο δέντρο που ορίζει θα είναι το μέγεθος του δεξιού υποδέντρου, συν 1 (για τον
+	// ίδιο τον κόμβο), συν όσα τέτοια στοιχεία υπάρχουν στο αριστερό υποδέντρο
 	else if (set->compare(node->value, max) > 0) {
 		return ((node->right != NULL) ? node->right->size : 0) + 1 + node_count_greater_than(set, node->left, max);
 	}
 }
 
 int set_count_greater_than(Set set, Pointer max) {
+	// Καλούμε την αντίστοιχη αναδρομική συνάρτηση για την ρίζα
 	return node_count_greater_than(set, set->root, max);
 }
 
 static int node_count_less_than(Set set, SetNode node, Pointer min) {
+	// Σταματάμε αν φτάσουμε στον "πάτο"
 	if (node == NULL) {
 		return 0;
 	}
+	// Αν ο κόμβος είναι μικρότερος από το min, το πλήθος στοιχείων μικρότερων του min
+	// στο δέντρο που ορίζει θα είναι το μέγεθος του αριστερού υποδέντρου, συν 1 (για τον
+	// ίδιο τον κόμβο), συν όσα τέτοια στοιχεία υπάρχουν στο δεξί υποδέντρο
 	else if (set->compare(node->value, min) < 0) {
 		return ((node->left != NULL) ? node->left->size : 0) + 1 + node_count_less_than(set, node->right, min);
 	}
+	// Αν βρεθεί κόμβος ίσος με το min, το πλήθος στοιχείων μικρότερων του στο
+	// στο δέντρο που ορίζει ο κόμβος θα είναι το μέγεθος του αριστερού υποδέντρου
 	else if (set->compare(node->value, min) == 0) {
 		return ((node->left != NULL) ? node->left->size : 0);
 	}
+	// Αν ο κόμβος είναι μικρότερος από το min, το πλήθος στοιχείων μικρότερων του min
+	// στο δέντρο που ορίζει θα είναι το ίδιο με το πλήθος τους στο αριστερό υποδέντρο
 	else if (set->compare(node->value, min) > 0) {
 		return node_count_less_than(set, node->left, min);
 	}
 }
 
 int set_count_less_than(Set set, Pointer min) {
+	// Καλούμε την αντίστοιχη αναδρομική συνάρτηση για την ρίζα
 	return node_count_less_than(set, set->root, min);
 }
