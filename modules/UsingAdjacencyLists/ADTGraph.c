@@ -218,19 +218,13 @@ List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
         searchnode->in = false;
         searchnode->prev = NULL;
         searchnode->vertex = map_node_key(graph->vertex_list_map, mapnode);
+        searchnode->pqnode = NULL;
         map_insert(search_map, searchnode->vertex, searchnode);
     }
-    // Αρχικοποιούμε την dist_pqueue, που θα χρησιμοποιοήσουμε για να βρίσκουμε
-    // γρήγορα την πιο "κοντινή" κορυφή που θα μπει στο σύνολο
+    // Αρχικοποιούμε την dist_pqueue και προσθέτουμε το source με απόσταση 0
     PriorityQueue dist_pqueue = pqueue_create(compare_distances, NULL, NULL);
-    PriorityQueueNode pqnode;
-    for (MapNode mapnode = map_first(search_map) ; mapnode != MAP_EOF ; mapnode = map_next(search_map, mapnode)) {
-        pqnode = pqueue_insert(dist_pqueue, map_node_value(search_map, mapnode));
-        ((SearchNode)map_node_value(search_map, mapnode))->pqnode = pqnode;
-    }
-    // Μηδενίζουμε την απόσταση από την "αρχή"
     (searchnode = map_find(search_map, source))->dist = 0;
-    pqueue_update_order(dist_pqueue, searchnode->pqnode);
+    searchnode->pqnode = pqueue_insert(dist_pqueue, searchnode);
 
     // Κυρίως αλγόριθμος
     List edges;
@@ -261,7 +255,12 @@ List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
             if (alt < neighb->dist) {
                 neighb->dist = alt;
                 neighb->prev = searchnode;
-                pqueue_update_order(dist_pqueue, neighb->pqnode);
+                if (neighb->pqnode) {
+                    pqueue_update_order(dist_pqueue, neighb->pqnode);
+                }
+                else {
+                    neighb->pqnode = pqueue_insert(dist_pqueue, neighb);
+                }
             }
         }
     }
