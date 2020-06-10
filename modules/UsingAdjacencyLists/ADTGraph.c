@@ -194,6 +194,8 @@ struct search_node {
 // Συνάρτηση που συγκρίνει αποστάσεις, για την pqueue
 
 int compare_distances(Pointer a, Pointer b) {
+    // Δεν γίνεται αφαίρεση για να μην υπάρχει πρόβλημα
+    // με την αλλαγή τύπου από uint σε int
     if (((SearchNode) b)->dist > ((SearchNode) a)->dist) {
         return 1;
     }
