@@ -17,12 +17,14 @@
 
 // Struct που αποθηκεύει μια ασθένεια και το πλήθος κρουσμάτων αυτής.
 
-typedef struct dis_count* DisCount;
+typedef struct dis_cases* DisCases;
 
-struct dis_count {
+struct dis_cases {
 	String disease;
 	int cases;
 };
+
+// Hash function που παίρνει υπ' όψιν την χώρα και την ασθένεια ενός κρούσματος
 
 uint hash_dis_country(Pointer value) {
 	char total[strlen(((Record) value)->disease) + strlen(((Record) value)->country) + 1];
@@ -31,17 +33,27 @@ uint hash_dis_country(Pointer value) {
 	return hash_string(total);
 }
 
+// Hash function που παίρνει υπ' όψιν την ασθένεια ενός κρούσματος
+
 uint hash_disease(Pointer value) {
 	return hash_string(((Record) value)->disease);
 }
+
+// Hash function που παίρνει υπ' όψιν την χώρα ενός κρούσματος
 
 uint hash_country(Pointer value) {
 	return hash_string(((Record) value)->country);
 }
 
+// Hash function που παίρνει υπ' όψιν το id ενός κρούσματος
+
 uint hash_id(Pointer value) {
 	return ((Record) value)->id;
 }
+
+// Συνάρτηση σύγκρισης κρουσμάτων ως προς την ημερομηνία τους.
+// Ισοδύναμα θεωρούνται μόνο όσα έχουν ίδιο id, άρα αν δύο διαφορετικά
+// έχουν ίδια ημερομηνία κατατάσσονται σε αύξουσα σειρά id
 
 int compare_record_dates(Pointer a, Pointer b) {
 	int result = strcmp(((Record) a)->date, ((Record) b)->date);
@@ -51,6 +63,9 @@ int compare_record_dates(Pointer a, Pointer b) {
 	return ((Record) a)->id - ((Record) b)->id;
 }
 
+// Συνάρτηση σύγκρισης κρουσμάτων ως προς την χώρα και την ασθένειά τους.
+// Μας ενδιαφέρει ουσιαστικά μόνο η περίπτωση της ισοδυναμίας.
+
 int compare_records_country_dis(Pointer a, Pointer b) {
 	int result = strcmp(((Record) a)->country, ((Record) b)->country);
 	if (result) {
@@ -59,23 +74,46 @@ int compare_records_country_dis(Pointer a, Pointer b) {
 	return strcmp(((Record) a)->disease, ((Record) b)->disease);
 }
 
+// Συνάρτηση σύγκρισης κρουσμάτων ως προς την χώρα τους.
+// Μας ενδιαφέρει ουσιαστικά μόνο η περίπτωση της ισοδυναμίας.
+
 int compare_countries(Pointer a, Pointer b) {
 	return strcmp(((Record) a)->country, ((Record) b)->country);
 }
+
+// Συνάρτηση σύγκρισης κρουσμάτων ως προς την ασθένειά τους.
+// Μας ενδιαφέρει ουσιαστικά μόνο η περίπτωση της ισοδυναμίας.
 
 int compare_diseases(Pointer a, Pointer b) {
 	return strcmp(((Record) a)->disease, ((Record) b)->disease);
 }
 
+// Συνάρτηση σύγκρισης κρουσμάτων ως προς το id τους.
+// Μας ενδιαφέρει ουσιαστικά μόνο η περίπτωση της ισοδυναμίας.
+
 int compare_ids(Pointer a, Pointer b) {
 	return ((Record) a)->id - ((Record) b)->id;
 }
 
+// Συνάρτηση σύγκρισης DiseaseCases ως προς τον αριθμό των κρουσματάτων τους.
+
 int compare_cases(Pointer a, Pointer b) {
-	return ((DisCount) a)->cases - ((DisCount) b)->cases;
+	return ((DisCases) a)->cases - ((DisCases) b)->cases;
 }
 
-static Map country_dis_map, id_map, dis_map, country_map, country_to_pq, country_dis_to_pqnode, dis_to_pqnode;
+// Οι map country_map, dis_map, country_dis_map οδηγούν από ένα record (key) στο set (value) από records, κατατεταγμένα με την ημερομηνία τους,
+// που μοιράζονται την ίδια χώρα, ασθένεια, ή και τα δύο, αντίστοιχα.
+// Ο id_map οδηγεί από ένα record με ένα συγκεκριμένο id στο record με το ίδιο id που είναι αποθηκευμένο στο disease monitor.
+// Η country_to_pq οδηγεί από μια χώρα (key) στην pqueue (value) από DisCases, δηλαδή από ασθένειες κατατεταγμένες με τον
+// αριθμό των κρουσμάτων τους, για αυτήν την χώρα.
+// Η country_dis_to_pqnode οδηγεί από ένα record (key) στον κόμβο της pqueue για αυτήν την χώρα (value), ο οποίος
+// αναπαριστά αυτήν την ασθένεια.
+// Το total_set είναι ένα σύνολο που περιέχει όλα τα records κατατεταγμένα με την ημερομηνία τους.
+// Η total_pq είναι μια pqueue που περιέχει όλες τις ασθένειες κατατεταγμένες σύμφωνα με τον αριθμό των κρουσμάτων τους,
+// ανεξάρτητα από την χώρα.
+// Ο dis_to_pqnode οδηγεί από ένα record (key) με μια συγκεκριμένη ασθένεια στον κόμβο της total_pq που αντιπροσωεύει αυτήν την ασθένεια.
+
+static Map country_map, dis_map, country_dis_map, id_map, country_to_pq, country_dis_to_pqnode, dis_to_pqnode;
 static Set total_set;
 static PriorityQueue total_pq;
 
@@ -85,19 +123,27 @@ static PriorityQueue total_pq;
 void dm_init() {
 	country_dis_map = map_create(compare_records_country_dis, NULL, (DestroyFunc) set_destroy);
 	map_set_hash_function(country_dis_map, hash_dis_country);
+
 	dis_map = map_create(compare_diseases, NULL, (DestroyFunc) set_destroy);
 	map_set_hash_function(dis_map, hash_disease);
+
 	country_map = map_create(compare_countries, NULL, (DestroyFunc) set_destroy);
 	map_set_hash_function(country_map, hash_country);
+
 	id_map =  map_create(compare_ids, NULL, NULL);
 	map_set_hash_function(id_map, hash_id);
-	country_to_pq = map_create(compare_countries, NULL, (DestroyFunc) pqueue_destroy);
-	map_set_hash_function(country_to_pq, hash_country);
+
+	country_to_pq = map_create((CompareFunc) strcmp, NULL, (DestroyFunc) pqueue_destroy);
+	map_set_hash_function(country_to_pq, hash_string);
+
 	country_dis_to_pqnode = map_create(compare_records_country_dis, NULL, NULL);
 	map_set_hash_function(country_dis_to_pqnode, hash_dis_country);
+
 	dis_to_pqnode = map_create(compare_diseases, NULL, NULL);
 	map_set_hash_function(dis_to_pqnode, hash_disease);
+
 	total_set = set_create(compare_record_dates, NULL);
+
 	total_pq = pqueue_create(compare_cases, free, NULL);
 }
 
@@ -128,16 +174,24 @@ void dm_destroy() {
 
 bool dm_insert_record(Record record) {
 	Set dest_set;
+	// Προσθέτουμε το record στο id_map για να το βρίσκουμε μετά από το id του
 	map_insert(id_map, record, record);
+
+	// Το προσθέτουμε στο συνολικό σύνολο
 	set_insert(total_set, record);
+
+	// Το προσθέτουμε στο σύνολο που καθορίζεται από την ασθένειά του
 	if ((dest_set = map_find(dis_map, record))) {
 		set_insert(dest_set, record);
 	}
+	// Αν δεν υπάρχει τέτοιο σύνολο το δημιουργούμε
 	else {
 		dest_set = set_create(compare_record_dates, NULL);
 		map_insert(dis_map, record, dest_set);
 		set_insert(dest_set, record);
 	}
+
+	// Το προσθέτουμε στο σύνολο που καθορίζεται από την χώρα του
 	if ((dest_set = map_find(country_map, record))) {
 		set_insert(dest_set, record);
 	}
@@ -147,14 +201,18 @@ bool dm_insert_record(Record record) {
 		set_insert(dest_set, record);
 	}
 
+	// Το προσθέτουμε στην pqueue της χώρας του
 	PriorityQueue dest_pq;
 	PriorityQueueNode node;
-	DisCount count;
-	if ((dest_pq = map_find(country_to_pq, record))) {
+	DisCases count;
+	// Αν υπάρχει pqueue το προσθέτουμε εκεί
+	if ((dest_pq = map_find(country_to_pq, record->country))) {
+		// ΑΝ υπάρχει ο κόμβος τον ενημερώνουμε
 		if ((node = map_find(country_dis_to_pqnode, record))) {
-			((DisCount) pqueue_node_value(dest_pq, node))->cases++;
+			((DisCases) pqueue_node_value(dest_pq, node))->cases++;
 			pqueue_update_order(dest_pq, node);
 		}
+		// ΑΛλιώς τον δημιουργούμε, και τον αποθηκεύουμε στο αντίστοιχο map
 		else {
 			count = malloc(sizeof(*count));
 			count->disease = record->disease;
@@ -163,9 +221,10 @@ bool dm_insert_record(Record record) {
 			map_insert(country_dis_to_pqnode, record, node);
 		}
 	}
+	// Αλλιώς την δημιουργούμε
 	else {
 		dest_pq = pqueue_create(compare_cases, free, NULL);
-		map_insert(country_to_pq, record, dest_pq);
+		map_insert(country_to_pq, record->country, dest_pq);
 		count = malloc(sizeof(*count));
 		count->disease = record->disease;
 		count->cases = 1;
@@ -173,8 +232,9 @@ bool dm_insert_record(Record record) {
 		map_insert(country_dis_to_pqnode, record, node);
 	}
 
+	// Το προσθέτουμε στην συνολική pqueue
 	if ((node = map_find(dis_to_pqnode, record))) {
-		((DisCount) pqueue_node_value(total_pq, node))->cases++;
+		((DisCases) pqueue_node_value(total_pq, node))->cases++;
 		pqueue_update_order(total_pq, node);
 	}
 	else {
@@ -185,13 +245,15 @@ bool dm_insert_record(Record record) {
 		map_insert(dis_to_pqnode, record, node);
 	}
 
+	// Το προσθέτουμε στο σύνολο που καθορίζεται από την ασθένειά και την χώρα του
 	if ((dest_set = map_find(country_dis_map, record))) {
-		return set_insert(dest_set, record);
+		return set_insert(dest_set, record);	// Η set_insert έχει τροποποιηθεί για να επιστρέφει true αν υπήρχε ήδη ισοδύναμη τιμή
 	}
 	else {
 		dest_set = set_create(compare_record_dates, NULL);
 		map_insert(country_dis_map, record, dest_set);
-		return set_insert(dest_set, record);
+		set_insert(dest_set, record);
+		return false;
 	}
 }
 
@@ -199,17 +261,25 @@ bool dm_insert_record(Record record) {
 // ευθύνη του χρήστη). Επιστρέφει true αν υπήρχε τέτοια εγγραφή, αλλιώς false.
 
 bool dm_remove_record(int id) {
+	// Δημιουργούμε ένα προσωρινό record με το δοσμένο id για να
+	// βρούμε το record με αυτό το id που έχουμε αποθηκεύσει
 	Record temp_record = malloc(sizeof(*temp_record));
 	temp_record->id = id;
 	Record record = map_find(id_map, temp_record);
+
+	// Αν δεν υπάρχει επιστρέφουμε false
 	if (record == NULL) {
 		free(temp_record);
 		return false;
 	}
+
+	// Αλλιώς το αφαιρούμε από το id_map
 	map_remove(id_map, temp_record);
 	free(temp_record);
+	// Από όλα τα sets
 	Set set = map_find(country_dis_map, record);
 	set_remove(set, record);
+	// Τα οποία καταστρέφονται αν μείνουν κενά
 	if (set_size(set) == 0) {
 		map_remove(country_dis_map, record);
 	}
@@ -224,14 +294,17 @@ bool dm_remove_record(int id) {
 		map_remove(country_map, record);
 	}
 
-	PriorityQueue pqueue = map_find(country_to_pq, record);
+	// Από την pqueue της χώρας του
+	PriorityQueue pqueue = map_find(country_to_pq, record->country);
 	PriorityQueueNode node = map_find(country_dis_to_pqnode, record);
-	DisCount count = pqueue_node_value(pqueue, node);
+	DisCases count = pqueue_node_value(pqueue, node);
+	// Ενημερώνεται το node και αν μείνει κενό αφαιρείται
 	if (count->cases == 1) {
 		map_remove(country_dis_to_pqnode, record);
 		pqueue_remove_node(pqueue, node);
+		// Και αν μείνει κενή και η pqueue καταστρέφεται
 		if (pqueue_size(pqueue) == 0) {
-			map_remove(country_to_pq, record);
+			map_remove(country_to_pq, record->country);
 		}
 	}
 	else {
@@ -239,8 +312,10 @@ bool dm_remove_record(int id) {
 		pqueue_update_order(pqueue, node);
 	}
 
+	// Από την συνολική pqueue
 	node = map_find(dis_to_pqnode, record);
 	count = pqueue_node_value(total_pq, node);
+	// Ενημερώνεται ή αφαιρείται ο κόμβος
 	if (count->cases == 1) {
 		map_remove(dis_to_pqnode, record);
 		pqueue_remove_node(total_pq, node);
@@ -250,6 +325,7 @@ bool dm_remove_record(int id) {
 		pqueue_update_order(total_pq, node);
 	}
 
+	// Τέλος αφιρείται από το συνολικό σύνολο κρουσμάτων
 	set_remove(total_set, record);
 	return true;
 }
@@ -275,6 +351,8 @@ bool dm_remove_record(int id) {
 // οποιαδήποτε σειρά.
 
 List dm_get_records(String disease, String country, Date date_from, Date date_to) {
+	// Επιλέγουμε το map ανάλογα με το πόσες πληροφορίες έχουμε για την χώρα
+	// και μέσα από από αυτό βρίσκουμε το κατάλληλο set
 	Map searchmap = country_dis_map;
 	Set searchset;
 	if ((disease != NULL) || (country != NULL)) {
@@ -293,24 +371,35 @@ List dm_get_records(String disease, String country, Date date_from, Date date_to
 	else {
 		searchset = total_set;
 	}
+
+	// Αν δεν βρούμε τέτοιο set τότε δεν υπάρχουν κατάλληλα
+	// records και επιστρέφουμε κενή λίστα
 	if (searchset == NULL) {
 		return list_create(NULL);
 	}
-	Record record1 = malloc(sizeof(*record1));
-	record1->date = date_from;
-	record1->id = 0;
-	Record record2 = malloc(sizeof(*record2));
-	record2->date = date_to;
-	record2->id = INT_MAX;
-	List list = set_return_from_to(searchset, (date_from != NULL) ? record1 : NULL, (date_to != NULL) ? record2 : NULL);
-	free(record1);
-	free(record2);
+
+	// Αλλιώς φτιάχνουμε δύο records ως πάνω και κάτω όρια
+	Record record_from = malloc(sizeof(*record_from));
+	record_from->date = date_from;
+	record_from->id = 0;
+	Record record_to = malloc(sizeof(*record_to));
+	record_to->date = date_to;
+	record_to->id = INT_MAX;
+
+	// Και βρίσκουμε στο set τα records ανάμεσα σε αυτά τα όρια (NULL αν δεν υπάρχουν)
+	List list = set_return_from_to(searchset, (date_from != NULL) ? record_from : NULL, (date_to != NULL) ? record_to : NULL);
+
+	free(record_from);
+	free(record_to);
+	
 	return list;
 }
 
 // Επιστρέφει τον αριθμό εγγραφών που ικανοποιούν τα συγκεκριμένα κριτήρια.
 
 int dm_count_records(String disease, String country, Date date_from, Date date_to) {
+	// Επιλέγουμε το map ανάλογα με το πόσες πληροφορίες έχουμε για την χώρα
+	// και μέσα από από αυτό βρίσκουμε το κατάλληλο set
 	Map searchmap = country_dis_map;
 	Set searchset;
 	if ((disease != NULL) || (country != NULL)) {
@@ -329,17 +418,29 @@ int dm_count_records(String disease, String country, Date date_from, Date date_t
 	else {
 		searchset = total_set;
 	}
+
+	// Αν δεν βρούμε τέτοιο set τότε δεν υπάρχουν κατάλληλα
+	// records και επιστρέφουμε 0
 	if (searchset == NULL) {
 		return 0;
 	}
+
+	// Δημιουργούμε ένα record ως κάτω όριο 
 	Record date_record = malloc(sizeof(*date_record));
 	date_record->date = date_from;
 	date_record->id = 0;
+	// Μετράμε τα records κάτω από αυτό
 	int before = (date_from != NULL) ? set_count_less_than(searchset, date_record) : 0;
+
+	// Δημιουργούμε ένα record ως πάνω όριο 
 	date_record->date = date_to;
 	date_record->id = INT_MAX;
+	// Μετράμε τα records πάνω από αυτό
 	int after = (date_to != NULL) ? set_count_greater_than(searchset, date_record) : 0;
+
 	free(date_record);
+
+	// Επιστρέφουμε το πλήθος όλων των εγγραφών μείον αυτών εκτός των ορίων
 	return set_size(searchset) - before - after;
 }
 
@@ -354,28 +455,38 @@ int dm_count_records(String disease, String country, Date date_from, Date date_t
 List dm_top_diseases(int k, String country) {
 	List top_nodes, top_diseases = list_create(NULL);
 	PriorityQueue diseases;
+
+	// Βρίσκουμε την κατάλληλη pqueue ανάλογα με τον ψάχνουμε τις ασθένειες σε μια χώρα ή γενικά
 	if (country != NULL) {
-		Record temp = malloc(sizeof(*temp));
-		temp->country = country;
-		diseases = map_find(country_to_pq, temp);
-		free(temp);
+		diseases = map_find(country_to_pq, country);
 	}
 	else {
 		diseases = total_pq;
 	}
+
+	// Αν δεν υπάρχει τέτοια επιστρέφουμε κενή λίστα
 	if (diseases == NULL) {
 		return top_diseases;
 	}
+
+	// Παίρουμε τις πρώτες k ασθένειες
 	top_nodes = pqueue_top_k(diseases, k);
+
+	// ΑΛλά αφού βρίσκονται σε κόμβους μαζί με το πλήθπς των κρουσμάτων,
+	// δημιουργούμε μια λίστα που θα περιέχει μόνο τις ασθένειες
 	if (list_size(top_nodes)) {
-		list_insert_next(top_diseases, LIST_BOF, ((DisCount) list_node_value(top_nodes, list_first(top_nodes)))->disease);
+		list_insert_next(top_diseases, LIST_BOF, ((DisCases) list_node_value(top_nodes, list_first(top_nodes)))->disease);
 	}
 	ListNode node1, node2;
 	for (node1 = list_next(top_nodes, list_first(top_nodes)), node2 = list_first(top_diseases);
 		node1 != LIST_EOF;
 		node1 = list_next(top_nodes, node1), node2 = list_next(top_diseases, node2)) {
-			list_insert_next(top_diseases, node2, ((DisCount) list_node_value(top_nodes, node1))->disease);
+			list_insert_next(top_diseases, node2, ((DisCases) list_node_value(top_nodes, node1))->disease);
 	}
+
+	// Δεν χρειαζόμαστε την λίστα με τους κόμβους ασθένειας-κρουσμάτων
 	list_destroy(top_nodes);
+
+	// Επιστρέφουμε την λίστα με τις ασθένειες
 	return top_diseases;
 }

@@ -222,7 +222,9 @@ void test_top_diseases(void) {
 	for (int k = 1; k <= 6; k++)
 		run_and_test_top_diseases(k, NULL);
 
-	TEST_ASSERT(list_size(dm_top_diseases(5, "Snow")) == 0);		// Περίπτωση που δεν υπάρχουν εγγραφές
+	List no_diseases = dm_top_diseases(5, "Snow");
+	TEST_ASSERT(list_size(no_diseases) == 0);		// Περίπτωση που δεν υπάρχουν εγγραφές
+	list_destroy(no_diseases);
 
 	dm_destroy();
 }
