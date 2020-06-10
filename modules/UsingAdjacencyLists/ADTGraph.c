@@ -268,6 +268,7 @@ List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
     pqueue_destroy(dist_pqueue);
     // Επιστρέφουμε την λίστα
     if ((searchnode = map_find(search_map, target))->prev == NULL) {
+        map_destroy(search_map);
         return path;
     }
     for ( ; searchnode != NULL ; searchnode = searchnode->prev) {
