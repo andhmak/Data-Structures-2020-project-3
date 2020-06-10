@@ -26,7 +26,7 @@ struct dis_cases {
 
 // Hash function που παίρνει υπ' όψιν την χώρα και την ασθένεια ενός κρούσματος
 
-uint hash_dis_country(Pointer value) {
+static uint hash_dis_country(Pointer value) {
 	char total[strlen(((Record) value)->disease) + strlen(((Record) value)->country) + 1];
 	strcpy(total, ((Record) value)->disease);
 	strcat(total, ((Record) value)->country);
@@ -35,19 +35,19 @@ uint hash_dis_country(Pointer value) {
 
 // Hash function που παίρνει υπ' όψιν την ασθένεια ενός κρούσματος
 
-uint hash_disease(Pointer value) {
+static uint hash_disease(Pointer value) {
 	return hash_string(((Record) value)->disease);
 }
 
 // Hash function που παίρνει υπ' όψιν την χώρα ενός κρούσματος
 
-uint hash_country(Pointer value) {
+static uint hash_country(Pointer value) {
 	return hash_string(((Record) value)->country);
 }
 
 // Hash function που παίρνει υπ' όψιν το id ενός κρούσματος
 
-uint hash_id(Pointer value) {
+static uint hash_id(Pointer value) {
 	return ((Record) value)->id;
 }
 
@@ -55,7 +55,7 @@ uint hash_id(Pointer value) {
 // Ισοδύναμα θεωρούνται μόνο όσα έχουν ίδιο id, άρα αν δύο διαφορετικά
 // έχουν ίδια ημερομηνία κατατάσσονται σε αύξουσα σειρά id
 
-int compare_record_dates(Pointer a, Pointer b) {
+static int compare_record_dates(Pointer a, Pointer b) {
 	int result = strcmp(((Record) a)->date, ((Record) b)->date);
 	if (result) {
 		return result;
@@ -66,7 +66,7 @@ int compare_record_dates(Pointer a, Pointer b) {
 // Συνάρτηση σύγκρισης κρουσμάτων ως προς την χώρα και την ασθένειά τους.
 // Μας ενδιαφέρει ουσιαστικά μόνο η περίπτωση της ισοδυναμίας.
 
-int compare_records_country_dis(Pointer a, Pointer b) {
+static int compare_records_country_dis(Pointer a, Pointer b) {
 	int result = strcmp(((Record) a)->country, ((Record) b)->country);
 	if (result) {
 		return result;
@@ -77,27 +77,27 @@ int compare_records_country_dis(Pointer a, Pointer b) {
 // Συνάρτηση σύγκρισης κρουσμάτων ως προς την χώρα τους.
 // Μας ενδιαφέρει ουσιαστικά μόνο η περίπτωση της ισοδυναμίας.
 
-int compare_countries(Pointer a, Pointer b) {
+static int compare_countries(Pointer a, Pointer b) {
 	return strcmp(((Record) a)->country, ((Record) b)->country);
 }
 
 // Συνάρτηση σύγκρισης κρουσμάτων ως προς την ασθένειά τους.
 // Μας ενδιαφέρει ουσιαστικά μόνο η περίπτωση της ισοδυναμίας.
 
-int compare_diseases(Pointer a, Pointer b) {
+static int compare_diseases(Pointer a, Pointer b) {
 	return strcmp(((Record) a)->disease, ((Record) b)->disease);
 }
 
 // Συνάρτηση σύγκρισης κρουσμάτων ως προς το id τους.
 // Μας ενδιαφέρει ουσιαστικά μόνο η περίπτωση της ισοδυναμίας.
 
-int compare_ids(Pointer a, Pointer b) {
+static int compare_ids(Pointer a, Pointer b) {
 	return ((Record) a)->id - ((Record) b)->id;
 }
 
 // Συνάρτηση σύγκρισης DiseaseCases ως προς τον αριθμό των κρουσματάτων τους.
 
-int compare_cases(Pointer a, Pointer b) {
+static int compare_cases(Pointer a, Pointer b) {
 	return ((DisCases) a)->cases - ((DisCases) b)->cases;
 }
 
@@ -327,6 +327,8 @@ bool dm_remove_record(int id) {
 
 	// Τέλος αφιρείται από το συνολικό σύνολο κρουσμάτων
 	set_remove(total_set, record);
+
+	// Το record αφαιρέθηκε επιτυχώς
 	return true;
 }
 
