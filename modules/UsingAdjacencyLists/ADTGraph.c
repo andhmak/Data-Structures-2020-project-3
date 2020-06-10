@@ -11,19 +11,19 @@
 #include <stdlib.h>
 #include <limits.h>
 
-// Ενα γράφος αναπαριστάται από τον τύπο Graph
-
-typedef struct graph* Graph;
+// Ένας γράφος αναπαριστάται από τον τύπο Graph
 
 struct graph {
-    Map vertex_list_map;
+    Map vertex_list_map;    // Map: vertex -> adjacency list
 };
+
+// Μια ακμή αναπαριστάται από τον τύπο Edge
 
 typedef struct edge* Edge;
 
 struct edge {
-    Pointer neighb_vertex;
-    int weight;
+    Pointer neighb_vertex;  // Γειτονική κορυφή
+    uint weight;            // Βάρος ακμής
 };
 
 // Δημιουργεί και επιστρέφει ένα γράφο, στον οποίο τα στοιχεία (οι κορυφές)
@@ -45,7 +45,9 @@ int graph_size(Graph graph) {
 // Προσθέτει μια κορυφή στο γράφο.
 
 void graph_insert_vertex(Graph graph, Pointer vertex) {
+    // Αρχικοποιούμε μια λίστα γειτνίασης
     List neighb_list = list_create(free);
+    // Την βάζουμε στο map μαζί με την κορυφή
     map_insert(graph->vertex_list_map, vertex, neighb_list);
 }
 
@@ -53,6 +55,7 @@ void graph_insert_vertex(Graph graph, Pointer vertex) {
 // κληση και είναι ευθύνη του χρήστη να κάνει list_destroy.
 
 List graph_get_vertices(Graph graph) {
+    // Φτιάχνουμε μια λίστα και αντιγράφουμε σε αυτήν τις κορυφές που βρίσκονται στο map
     List newlist = list_create(NULL);
     if (map_size(graph->vertex_list_map) == 0) {
         return newlist;
@@ -66,10 +69,12 @@ List graph_get_vertices(Graph graph) {
 // Διαγράφει μια κορυφή από τον γράφο (αν υπάρχουν ακμές διαγράφονται επίσης).
 
 void graph_remove_vertex(Graph graph, Pointer vertex) {
+    // Μέσω της λίστα γειτνίασης της κορυφής βρίσκουμε τις λίστες γειτνίασης όλων των γειτονικών κορυφών
     List neighb_list = map_find(graph->vertex_list_map, vertex);
     List neighb_neighb_list;
     for (ListNode listnode = list_first(neighb_list) ; listnode != LIST_EOF ; listnode = list_next(neighb_list, listnode)) {
         neighb_neighb_list = map_find(graph->vertex_list_map, ((Edge)list_node_value(neighb_list, listnode))->neighb_vertex);
+        // Από αυτήν ψάχνουμε και αφαιρούμε την ακμή με την κορυφή που θα αφαιρεθεί
         if (((Edge)list_node_value(neighb_neighb_list, list_first(neighb_neighb_list)))->neighb_vertex == vertex) {
             list_remove_next(neighb_neighb_list, LIST_BOF);
             continue;
@@ -81,12 +86,18 @@ void graph_remove_vertex(Graph graph, Pointer vertex) {
             }
         }
     }
+    // Αφαιρούμε την κορυφή
     map_remove(graph->vertex_list_map, vertex);
 }
 
 // Προσθέτει μια ακμή με βάρος weight στο γράφο.
+// Αν η ακμή υπάρχει ήδη έχει απροσδιόριστη συμπεριφορά.
+// (εφόσον ήταν αποδεκτό το έκανα έτσι γιατί σε ορισμένες περιπτώσεις
+// βελτιώνει την πολυπλοκότητα αφού δεν διατρέχουμε τις λίστες γειτνίασης
+// για να βρούμε αν υπάρχει ήδη ακμή)
 
 void graph_insert_edge(Graph graph, Pointer vertex1, Pointer vertex2, uint weight) {
+    // Δημιουργούμε μια ακμή για κάθε κορυφή και τις προσθέτουμε στις αντίστοιχες λίστες γειτνίασης
     Edge edge1 = malloc(sizeof(*edge1)), edge2 = malloc(sizeof(*edge2));
     edge1->neighb_vertex = vertex2;
     edge1->weight = weight;
@@ -99,6 +110,7 @@ void graph_insert_edge(Graph graph, Pointer vertex1, Pointer vertex2, uint weigh
 // Αφαιρεί μια ακμή από το γράφο.
 
 void graph_remove_edge(Graph graph, Pointer vertex1, Pointer vertex2) {
+    // Διατρέχουμε τις λίστες γειτνίασης και αφαιρούμε τις ακμές της μιας κορυφής προς την άλλη
     List list1 = map_find(graph->vertex_list_map, vertex1);
     List list2 = map_find(graph->vertex_list_map, vertex2);
     ListNode listnode;
@@ -129,6 +141,8 @@ void graph_remove_edge(Graph graph, Pointer vertex1, Pointer vertex2) {
 // Επιστρέφει το βάρος της ακμής ανάμεσα στις δύο κορυφές, ή UINT_MAX αν δεν είναι γειτονικές.
 
 uint graph_get_weight(Graph graph, Pointer vertex1, Pointer vertex2) {
+    // Διατρέχουμε την λίστα γειτνίασης της πρώτης κορυφής και ψάχνουμε την ακμή προς την δεύτερη.
+    // Επιστρέφουμε το βάρος.
     List neighb_list = map_find(graph->vertex_list_map, vertex1);
     for (ListNode listnode = list_first(neighb_list) ; listnode != LIST_EOF ; listnode = list_next(neighb_list, listnode)) {
         if (((Edge)list_node_value(neighb_list, listnode))->neighb_vertex == vertex2) {
@@ -142,6 +156,7 @@ uint graph_get_weight(Graph graph, Pointer vertex1, Pointer vertex2) {
 // κληση και είναι ευθύνη του χρήστη να κάνει list_destroy.
 
 List graph_get_adjacent(Graph graph, Pointer vertex) {
+    // Φτιάχνουμε μια λίστα και αντιγράφουμε σε αυτήν τις κορυφές που βρίσκονται στην λίστα γειτνίασης της κορυφής
     List newlist = list_create(NULL);
     List oldlist = map_find(graph->vertex_list_map, vertex);
     if (list_size(oldlist) == 0) {
@@ -162,57 +177,87 @@ List graph_get_adjacent(Graph graph, Pointer vertex) {
 // target, ή κενή λίστα αν δεν υπάρχει κανένα μονοπάτι. Η λίστα δημιουργείται σε
 // κάθε κληση και είναι ευθύνη του χρήστη να κάνει list_destroy.
 
+// Ο τύπος SearchNode χρησιμοποιείται για τον αλγόριθμο του Dijkstra και αποθηκεύει
+// μια κορυφή, την προηγούμενή της στο μονοπάτι, τον κόμβο της μέσα στην pqueue,
+// την απόσταση από την αρχή προς αυτήν και το αν είναι μέσα στο "ψαγμένο" σύνολο ή όχι
+
 typedef struct search_node* SearchNode;
 
 struct search_node {
-    Pointer vertex;
-    SearchNode prev;
-    PriorityQueueNode pqnode;
-    int dist;
-    bool in;
+    Pointer vertex;             // κορυφή
+    SearchNode prev;            // προηγούμενη στο μονοπάτι
+    PriorityQueueNode pqnode;   // κόμβος στην pqueue
+    uint dist;                  // απόσταση
+    bool in;                    // αν είναι μέσα στο σύνολο ή όχι
 };
 
+// Συνάρτηση που συγκρίνει αποστάσεις, για την pqueue
+
 int compare_distances(Pointer a, Pointer b) {
-    return ((SearchNode) b)->dist - ((SearchNode) a)->dist;
+    if (((SearchNode) b)->dist > ((SearchNode) a)->dist) {
+        return 1;
+    }
+    else if (((SearchNode) b)->dist < ((SearchNode) a)->dist) {
+        return -1;
+    }
+    else {
+        return 0;
+    }
 }
 
 List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
     List path = list_create(NULL);
+    // search_map: map: vertex --> searchnode
     Map search_map = map_create(map_get_compare(graph->vertex_list_map), NULL, free);
     map_set_hash_function(search_map, map_get_hash_function(graph->vertex_list_map));
     SearchNode searchnode;
+    // Για κάθε κορυφή αρχικοποιούμε ένα searchnode και τα προσθέτουμε στο search_map
     for (MapNode mapnode = map_first(graph->vertex_list_map) ; mapnode != MAP_EOF ; mapnode = map_next(graph->vertex_list_map, mapnode)) {
         searchnode = malloc(sizeof(*searchnode));
-        searchnode->dist = INT_MAX;
+        searchnode->dist = UINT_MAX;
         searchnode->in = false;
         searchnode->prev = NULL;
         searchnode->vertex = map_node_key(graph->vertex_list_map, mapnode);
         map_insert(search_map, searchnode->vertex, searchnode);
     }
+    // Αρχικοποιούμε την dist_pqueue, που θα χρησιμοποιοήσουμε για να βρίσκουμε
+    // γρήγορα την πιο "κοντινή" κορυφή που θα μπει στο σύνολο
     PriorityQueue dist_pqueue = pqueue_create(compare_distances, NULL, NULL);
     PriorityQueueNode pqnode;
     for (MapNode mapnode = map_first(search_map) ; mapnode != MAP_EOF ; mapnode = map_next(search_map, mapnode)) {
         pqnode = pqueue_insert(dist_pqueue, map_node_value(search_map, mapnode));
         ((SearchNode)map_node_value(search_map, mapnode))->pqnode = pqnode;
     }
+    // Μηδενίζουμε την απόσταση από την "αρχή"
     (searchnode = map_find(search_map, source))->dist = 0;
     pqueue_update_order(dist_pqueue, searchnode->pqnode);
+
+    // Κυρίως αλγόριθμος
     List edges;
-    int alt;
+    uint alt;
     SearchNode neighb;
     while (pqueue_size(dist_pqueue)) {
+        // Επιλέγουμε την πιο "κοντινή" κορυφή
+        // Αν φτάσουμε στην κορυφή-προορισμό σταματάμε
         if ((searchnode = pqueue_max(dist_pqueue))->vertex == target) {
             break;
         }
+        // Την αφαιρούμε από την pqueue
         pqueue_remove_max(dist_pqueue);
+        // Την βάζουμε στο σύνολο
         searchnode->in = true;
+        // Παίρουμε την λίστα των γειτόνων
         edges = map_find(graph->vertex_list_map, searchnode->vertex);
+        // Για κάθε γείτονα
         for (ListNode listnode = list_first(edges) ; listnode != LIST_EOF ; listnode = list_next(edges, listnode)) {
             neighb = map_find(search_map, ((Edge)list_node_value(edges, listnode))->neighb_vertex);
+            // Αν δεν είναι μέσα στο σύνολο
             if (neighb->in) {
                 continue;
             }
+            // Υπολογίζουμε την απόσταση μέσω της κορυφής
             alt = searchnode->dist + ((Edge)list_node_value(edges, listnode))->weight;
+            // Αν η απόσταση είναι μικρότερη, την ενημερώνουμε και θέτουμε την κορυφή ως προηγούμενη
             if (alt < neighb->dist) {
                 neighb->dist = alt;
                 neighb->prev = searchnode;
@@ -220,7 +265,9 @@ List graph_shortest_path(Graph graph, Pointer source, Pointer target) {
             }
         }
     }
+    // Δεν χρειαζόμασε άλλο την pqueue
     pqueue_destroy(dist_pqueue);
+    // Επιστρέφουμε την λίστα
     if ((searchnode = map_find(search_map, target))->prev == NULL) {
         return path;
     }

@@ -83,7 +83,7 @@ static void rehash(Map map) {
 	for (int i = 0; i < map->capacity; i++)
 		map->list_array[i] = list_create(NULL);
 
-	// Τοποθετούμε ΜΟΝΟ τα entries που όντως περιέχουν ένα στοιχείο (το rehash είναι και μία ευκαιρία να ξεφορτωθούμε τα deleted nodes)
+	// Τοποθετούμε τα παλιά entries
 	map->size = 0;
 	for (int i = 0; i < old_capacity; i++) {
 		for (ListNode node = list_first(old_list_array[i]) ; node != LIST_EOF ; node = list_next(old_list_array[i], node)) {
@@ -91,7 +91,7 @@ static void rehash(Map map) {
 		}
 	}
 
-	//Αποδεσμεύουμε τον παλιό πίνακα ώστε να μήν έχουμε leaks
+	// Αποδεσμεύουμε τον παλιό πίνακα ώστε να μήν έχουμε leaks
 	for (uint i = 0 ; i < old_capacity ; i++) {
 		for (ListNode node = list_first(old_list_array[i]) ; node != LIST_EOF ; node = list_next(old_list_array[i], node)) {////////////
 			free(list_node_value(old_list_array[i], node));	// free MapNode
@@ -102,29 +102,32 @@ static void rehash(Map map) {
 }
 
 // Εισαγωγή στο hash table του ζευγαριού (key, item). Αν το key υπάρχει,
-// ανανέωση του με ένα νέο value, και η συνάρτηση επιστρέφει true.
+// ανανέωσή του με ένα νέο value, και η συνάρτηση επιστρέφει true.
 
 void map_insert(Map map, Pointer key, Pointer value) {
-	MapNode newnode;
-
-	ListNode node;
+	// Hash στο κλειδί για να βρούμε την κατάλληλη λίστα
 	uint pos = map->hash_function(key) % map->capacity;
 	List target_list = map->list_array[pos];
-	for (node = list_first(target_list) ; node != LIST_EOF ; node = list_next(target_list, node)) {
-		if (!map->compare(((MapNode)list_node_value(target_list, node))->key, key)) {
-			if (((MapNode)list_node_value(target_list, node))->key != key && map->destroy_key != NULL) {
-				map->destroy_key(((MapNode)list_node_value(target_list, node))->key);
+
+	// Ψάχνουμε στην λίστα για κόμβο με ισοδύναμο κλειδί και αν τον βρούμε ενημερώνουμε με τα key και value του
+	ListNode listnode;
+	for (listnode = list_first(target_list) ; listnode != LIST_EOF ; listnode = list_next(target_list, listnode)) {
+		if (!map->compare(((MapNode)list_node_value(target_list, listnode))->key, key)) {
+			if (((MapNode)list_node_value(target_list, listnode))->key != key && map->destroy_key != NULL) {
+				map->destroy_key(((MapNode)list_node_value(target_list, listnode))->key);
 			}
-			((MapNode)list_node_value(target_list, node))->key = key;
-			if (((MapNode)list_node_value(target_list, node))->value != value && map->destroy_value != NULL) {
-				map->destroy_value(((MapNode)list_node_value(target_list, node))->value);
+			((MapNode)list_node_value(target_list, listnode))->key = key;
+			if (((MapNode)list_node_value(target_list, listnode))->value != value && map->destroy_value != NULL) {
+				map->destroy_value(((MapNode)list_node_value(target_list, listnode))->value);
 			}
-			((MapNode)list_node_value(target_list, node))->value = value;
+			((MapNode)list_node_value(target_list, listnode))->value = value;
 			break;
 		}
 	}
-	if (node == LIST_EOF) {
-		newnode = malloc(sizeof(*newnode));
+
+	// Αλλιώς δημιουργούμε και προσθέτουμε νέο κόμβο
+	if (listnode == LIST_EOF) {
+		MapNode newnode = malloc(sizeof(*newnode));
 		newnode->key = key;
 		newnode->value = value;
 		list_insert_next(target_list, LIST_BOF, newnode);
@@ -139,16 +142,19 @@ void map_insert(Map map, Pointer key, Pointer value) {
 
 // Διαργραφή απο το Hash Table του κλειδιού με τιμή key
 bool map_remove(Map map, Pointer key) {
+	// Ψάχνουμε το node που περιέχει το key
 	MapNode node = map_find_node(map, key);
+	// Αν δεν το βρούμε επιστρέφουμε false
 	if (node == MAP_EOF)
 		return false;
-
+	// Βρίσκουμε την λίστα-πατέρα του node
 	List node_parent = map->list_array[map->hash_function(node->key) % map->capacity];
+	// Αφαιρούμε τον node από την λίστα
 	if (((MapNode)list_node_value(node_parent, list_first(node_parent))) == node) {
 		list_remove_next(node_parent, LIST_BOF);
 	}
 	else {
-		for (ListNode listnode = list_first(node_parent) ; list_next(node_parent, listnode) != NULL ; listnode = list_next(node_parent, listnode)) {
+		for (ListNode listnode = list_first(node_parent) ; list_next(node_parent, listnode) != LIST_EOF ; listnode = list_next(node_parent, listnode)) {
 			if (((MapNode)list_node_value(node_parent, list_next(node_parent, listnode))) == node) {
 				list_remove_next(node_parent, listnode);
 				break;
@@ -156,7 +162,7 @@ bool map_remove(Map map, Pointer key) {
 		}
 	}
 
-	// destroy
+	// destroy key και value
 	if (map->destroy_key != NULL) {
 		map->destroy_key(node->key);
 	}
@@ -164,8 +170,10 @@ bool map_remove(Map map, Pointer key) {
 		map->destroy_value(node->value);
 	}
 
+	// Απελευθερώνουμε τον node
 	free(node);
 
+	// Μειώνουμε το μέγεθος του map
 	map->size--;
 
 	return true;
@@ -174,11 +182,16 @@ bool map_remove(Map map, Pointer key) {
 // Αναζήτηση στο map, με σκοπό να επιστραφεί το value του κλειδιού που περνάμε σαν όρισμα.
 
 Pointer map_find(Map map, Pointer key) {
+	// Ψάχνουμε τον κόμβο
 	MapNode node = map_find_node(map, key);
-	if (node != MAP_EOF)
+	// Αν τον βρούμε, επιστρέφουμε το value
+	if (node != MAP_EOF) {
 		return node->value;
-	else
+	}
+	// Αλλιώς NULL
+	else {
 		return NULL;
+	}
 }
 
 
@@ -196,6 +209,7 @@ DestroyFunc map_set_destroy_value(Map map, DestroyFunc destroy_value) {
 
 // Απελευθέρωση μνήμης που δεσμεύει το map
 void map_destroy(Map map) {
+	// Σε κάθε λίστα στο array, σε κάθε κόμβο, καταστρέφουμε το κλειδί και την τιμή, μετά τον κόμβο, και μετά την λίστα
 	for (int i = 0; i < map->capacity; i++) {
 		for (ListNode node = list_first(map->list_array[i]) ; node != LIST_EOF ; node = list_next(map->list_array[i], node)) {
 			if (map->destroy_key != NULL) {
@@ -208,15 +222,16 @@ void map_destroy(Map map) {
 		}
 		list_destroy(map->list_array[i]);
 	}
-
+	// Απελευθερώνουμε το array
 	free(map->list_array);
+	// Απελευθερώνουμε το map
 	free(map);
 }
 
 /////////////////////// Διάσχιση του map μέσω κόμβων ///////////////////////////
 
 MapNode map_first(Map map) {
-	//Ξεκινάμε την επανάληψή μας απο το 1ο στοιχείο, μέχρι να βρούμε κάτι όντως τοποθετημένο
+	// Ξεκινάμε την επανάληψή μας απο την 1η λίστα, μέχρι να βρούμε κάτι όντως τοποθετημένο
 	for (int i = 0; i < map->capacity; i++) {
 		for (ListNode node = list_first(map->list_array[i]) ; node != LIST_EOF ; node = list_next(map->list_array[i], node)) {
 			return list_node_value(map->list_array[i], node);
@@ -227,8 +242,10 @@ MapNode map_first(Map map) {
 }
 
 MapNode map_next(Map map, MapNode node) {
+	// Βρίσκουμε με hash την λίστα όπου είναι το node
 	uint pos = map->hash_function(node->key) % map->capacity;
 	List parent = map->list_array[pos];
+	// Ψάχνουμε στην λίστα το node και επιστρέφουμε το επόμενο
 	for (ListNode listnode = list_first(parent) ; listnode != LIST_EOF ; listnode = list_next(parent, listnode)) {
 		if (list_node_value(parent, listnode) == node) {
 			if (list_next(parent, listnode) != NULL) {
@@ -237,6 +254,7 @@ MapNode map_next(Map map, MapNode node) {
 			break;
 		}
 	}
+	// Αν δεν υπάρχει επιστρέφουμε το πρώτο στοιχείο της πρώτης λίστας μετά που περιέχει κάτι
 	for (uint i = pos + 1 ; i < map->capacity ; i++) {
 		if (list_size(map->list_array[i])) {
 			return list_node_value(map->list_array[i], list_first(map->list_array[i]));
@@ -255,7 +273,9 @@ Pointer map_node_value(Map map, MapNode node) {
 }
 
 MapNode map_find_node(Map map, Pointer key) {
+	// Βρίσκουμε με hash την λίστα όπου είναι το key
 	List target_list = map->list_array[map->hash_function(key) % map->capacity];
+	// Ψάχνουμε το αντίχτοιχο node και το επιστρέφουμε
 	for (ListNode listnode = list_first(target_list) ; listnode != LIST_EOF ; listnode = list_next(target_list, listnode)) {
 		if (!map->compare(((MapNode) list_node_value(target_list, listnode))->key, key)) {
 			return list_node_value(target_list, listnode);

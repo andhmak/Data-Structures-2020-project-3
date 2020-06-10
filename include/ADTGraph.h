@@ -45,6 +45,10 @@ void graph_remove_vertex(Graph graph, Pointer vertex);
 void graph_insert_edge(Graph graph, Pointer vertex1, Pointer vertex2, uint weight);
 
 // Αφαιρεί μια ακμή από το γράφο.
+// Αν η ακμή υπάρχει ήδη έχει απροσδιόριστη συμπεριφορά.
+// (εφόσον ήταν αποδεκτό το έκανα έτσι γιατί σε ορισμένες περιπτώσεις
+// βελτιώνει την πολυπλοκότητα αφού δεν διατρέχουμε τις λίστες γειτνίασης
+// για να βρούμε αν υπάρχει ήδη ακμή)
 
 void graph_remove_edge(Graph graph, Pointer vertex1, Pointer vertex2);
 
