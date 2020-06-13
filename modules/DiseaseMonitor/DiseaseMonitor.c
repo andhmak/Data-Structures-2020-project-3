@@ -173,7 +173,16 @@ void dm_destroy() {
 // τον monitor.
 
 bool dm_insert_record(Record record) {
+	bool removed = false;
+
+	// Αν υπάρχει εγγραφή με αυτό το id την αφαιρούμε και σημειώνουμε πως υπήρχε
+	if (dm_remove_record(record->id)) {
+		removed = true;
+	}
+
+	// Προσθέτουμε την νέα εγγραφή
 	Set dest_set;
+
 	// Προσθέτουμε το record στο id_map για να το βρίσκουμε μετά από το id του
 	map_insert(id_map, record, record);
 
@@ -247,14 +256,16 @@ bool dm_insert_record(Record record) {
 
 	// Το προσθέτουμε στο σύνολο που καθορίζεται από την ασθένειά και την χώρα του
 	if ((dest_set = map_find(country_dis_map, record))) {
-		return set_insert(dest_set, record);	// Η set_insert έχει τροποποιηθεί για να επιστρέφει true αν υπήρχε ήδη ισοδύναμη τιμή
+		set_insert(dest_set, record);
 	}
 	else {
 		dest_set = set_create(compare_record_dates, NULL);
 		map_insert(country_dis_map, record, dest_set);
 		set_insert(dest_set, record);
-		return false;
 	}
+
+	// Επιστρέφουμε αν αφαιρέθηκε άλλη εγγραφή ή όχι
+	return removed;
 }
 
 // Αφαιρεί την εγγραφή με το συγκεκριμένο id από το σύστημα (χωρίς free, είναι

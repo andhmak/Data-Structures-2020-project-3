@@ -33,10 +33,10 @@ struct record records[] = {
 	{ .id = 18, .name = "Oberyn",   .country = "Martell",   .disease = "Eye pain",  .date = "0301-01-01" },
 	{ .id = 19, .name = "Robert",   .country = "Baratheon", .disease = "Grayscale", .date = "0298-01-01" },
 	{ .id = 20, .name = "Jorah",    .country = "Mormont",   .disease = "Grayscale", .date = "0299-01-01" },
-
 };
 int record_no = sizeof(records)/sizeof(struct record);
 
+struct record same_id = { .id = 1, 	.name = "Random",    .country = "Random",   .disease = "Random",	.date = "0292-01-01" };
 
 // Ελέγχει ότι οι εγγραφές στη λίστα result περιέχουν τα ids στον πινακα ids.
 // Η σειρά ΔΕΝ έχει σημασία.
@@ -88,6 +88,7 @@ void test_insert(void) {
 		List list = dm_get_records(NULL, NULL, NULL, NULL);
 		check_record_list(list, ids, i+1);
 	}
+	TEST_ASSERT(dm_insert_record(&same_id));				// Ελέγχει και διαφορετικά records με ίδιο id
 
 	dm_destroy();
 }
