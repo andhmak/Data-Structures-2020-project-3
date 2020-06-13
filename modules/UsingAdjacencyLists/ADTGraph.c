@@ -139,8 +139,13 @@ void graph_remove_edge(Graph graph, Pointer vertex1, Pointer vertex2) {
 }
 
 // Επιστρέφει το βάρος της ακμής ανάμεσα στις δύο κορυφές, ή UINT_MAX αν δεν είναι γειτονικές.
+// Αν είναι η ίδια κορυφή επιστρέφει 0 και αν κάποια κορυφή δεν υπάρχει έχει απροσδιόριστη συμπεριφορά.
 
 uint graph_get_weight(Graph graph, Pointer vertex1, Pointer vertex2) {
+    CompareFunc compare = map_get_compare(graph->vertex_list_map);
+    if (!compare(vertex1, vertex2)) {
+        return 0;
+    }
     // Διατρέχουμε την λίστα γειτνίασης της πρώτης κορυφής και ψάχνουμε την ακμή προς την δεύτερη.
     // Επιστρέφουμε το βάρος.
     List neighb_list = map_find(graph->vertex_list_map, vertex1);

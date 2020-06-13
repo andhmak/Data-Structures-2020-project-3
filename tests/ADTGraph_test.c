@@ -98,6 +98,11 @@ void test_insert() {
 		TEST_ASSERT(graph_get_weight(graph, vertex_array[i + 1], vertex_array[i]) == i + 1);
 	}
 
+	// Ελέγχουμε ότι το βάρος είναι 0 για ίδιες κορυφές
+	for (uint i = 0 ; i < N - 1 ; i++) {
+		TEST_ASSERT(graph_get_weight(graph, vertex_array[i], vertex_array[i]) == 0);
+	}
+
 	// Βάζουμε μερικές ακόμα ακμές για να μην ελέγχουμε μόνο μια εκφυλισμένη λίστα
 	for (int i = 0 ; i < N - 2 ; i++) {
 		graph_insert_edge(graph, vertex_array[i], vertex_array[i + 2], i + 10);

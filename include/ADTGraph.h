@@ -53,6 +53,7 @@ void graph_insert_edge(Graph graph, Pointer vertex1, Pointer vertex2, uint weigh
 void graph_remove_edge(Graph graph, Pointer vertex1, Pointer vertex2);
 
 // Επιστρέφει το βάρος της ακμής ανάμεσα στις δύο κορυφές, ή UINT_MAX αν δεν είναι γειτονικές.
+// Αν είναι η ίδια κορυφή επιστρέφει 0 και αν κάποια κορυφή δεν υπάρχει έχει απροσδιόριστη συμπεριφορά.
 
 uint graph_get_weight(Graph graph, Pointer vertex1, Pointer vertex2);
 
